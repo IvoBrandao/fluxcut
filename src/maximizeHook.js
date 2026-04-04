@@ -16,6 +16,7 @@
 
 import Meta from "gi://Meta";
 import GLib from "gi://GLib";
+import { isFullyMaximized } from "./compat.js";
 
 export class MaximizeHook {
     constructor(settings, snapOverlay, logger) {
@@ -137,7 +138,7 @@ export class MaximizeHook {
         if (!win) return;
 
         // Only intercept full maximizes (both axes)
-        if (win.get_maximized() !== Meta.MaximizeFlags.BOTH) return;
+        if (!isFullyMaximized(win)) return;
 
         // Skip if we deliberately maximized this window
         if (this._bypassed.has(win.get_id())) return;

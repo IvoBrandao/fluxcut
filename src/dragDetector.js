@@ -7,6 +7,7 @@
 import GObject from "gi://GObject";
 import GLib from "gi://GLib";
 import Meta from "gi://Meta";
+import { makeRect } from "./compat.js";
 
 export const DragDetector = GObject.registerClass(
     {
@@ -201,7 +202,7 @@ export const DragDetector = GObject.registerClass(
             // Gap logic matches ZoneManager._normToPixel: half-gap inset on
             // each edge (giving full-gap between adjacent zones).
             const halfG = g / 2;
-            const mk = (rx, ry, rw, rh) => new Meta.Rectangle({
+            const mk = (rx, ry, rw, rh) => makeRect({
                 x:      Math.round(rx + halfG),
                 y:      Math.round(ry + halfG),
                 width:  Math.round(rw - g),

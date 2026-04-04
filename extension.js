@@ -8,6 +8,7 @@
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Meta from "gi://Meta";
+import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 
 import { Settings } from "./src/settings.js";
@@ -27,6 +28,7 @@ import { ZoneEditor } from "./src/zoneEditor.js";
 import { MaximizeHook } from "./src/maximizeHook.js";
 import { Keybindings } from "./src/keybindings.js";
 import { Indicator } from "./src/indicator.js";
+import { isFullyMaximized } from "./src/compat.js";
 
 // ---------------------------------------------------------------------------
 
@@ -130,11 +132,14 @@ class FluxCutController {
         this._maximizeHook = new MaximizeHook(this._settings, this._snapOverlay, this._logger);
         this._maximizeHook.enable();
 
-        // Phase 11 — keybindings (this controller is the handler target)
+        // Phase 11 — disable GNOME native tiling (must happen BEFORE our keybindings)
+        this._overrideGnomeTiling();
+
+        // Phase 12 — keybindings (this controller is the handler target)
         this._keybindings = new Keybindings(this._settings, this, this._logger);
         this._keybindings.enable();
 
-        // Phase 12 — quick settings indicator
+        // Phase 13 — quick settings indicator
         this._indicator = new Indicator(this._settings, this, this._logger);
         this._indicator.enable();
 
@@ -174,6 +179,7 @@ class FluxCutController {
         // Reverse order
         this._indicator?.disable();
         this._keybindings?.disable();
+        this._restoreGnomeTiling();
         this._maximizeHook?.disable();
         this._zoneEditor?.destroy();
         this._snapAssist?.destroy();
@@ -226,6 +232,91 @@ class FluxCutController {
         this._snapAssist?.destroyAll();
         this._zoneEditor?.close();
         this._zoneHighlighter?.clearAll();
+    }
+
+    // ------------------------------------------------------------------ GNOME native tiling override
+
+    /**
+     * Disable GNOME's built-in tiling keybindings and edge-tiling so they
+     * don't conflict with FluxCut.  Saves original values for restore.
+     */
+    _overrideGnomeTiling() {
+        this._savedGnomeBindings = {};
+
+        // 1. Disable edge-tiling (drag-to-edge tiling)
+        try {
+            this._mutterSettings = new Gio.Settings({ schema_id: "org.gnome.mutter" });
+            this._savedGnomeBindings["edge-tiling"] = this._mutterSettings.get_boolean("edge-tiling");
+            this._mutterSettings.set_boolean("edge-tiling", false);
+            this._logger?.debug("Disabled GNOME edge-tiling");
+        } catch (e) {
+            this._logger?.debug(`Could not override edge-tiling: ${e.message}`);
+        }
+
+        // 2. Disable conflicting WM keybindings (Super+Up=maximize, Super+Down=unmaximize)
+        try {
+            this._wmSettings = new Gio.Settings({ schema_id: "org.gnome.desktop.wm.keybindings" });
+            for (const key of ["maximize", "unmaximize"]) {
+                try {
+                    this._savedGnomeBindings[`wm:${key}`] = this._wmSettings.get_strv(key);
+                    this._wmSettings.set_strv(key, []);
+                } catch (_) {}
+            }
+            this._logger?.debug("Disabled GNOME maximize/unmaximize keybindings");
+        } catch (e) {
+            this._logger?.debug(`Could not override WM keybindings: ${e.message}`);
+        }
+
+        // 3. Disable Mutter tile-left/tile-right (Super+Left/Right)
+        try {
+            this._mutterKbSettings = new Gio.Settings({ schema_id: "org.gnome.mutter.keybindings" });
+            for (const key of ["toggle-tiled-left", "toggle-tiled-right"]) {
+                try {
+                    this._savedGnomeBindings[`mutter:${key}`] = this._mutterKbSettings.get_strv(key);
+                    this._mutterKbSettings.set_strv(key, []);
+                } catch (_) {}
+            }
+            this._logger?.debug("Disabled GNOME tile-left/tile-right keybindings");
+        } catch (e) {
+            this._logger?.debug(`Could not override Mutter keybindings: ${e.message}`);
+        }
+    }
+
+    /**
+     * Restore GNOME's original tiling settings saved by _overrideGnomeTiling.
+     */
+    _restoreGnomeTiling() {
+        if (!this._savedGnomeBindings) return;
+
+        try {
+            if (this._mutterSettings && this._savedGnomeBindings["edge-tiling"] !== undefined) {
+                this._mutterSettings.set_boolean("edge-tiling", this._savedGnomeBindings["edge-tiling"]);
+            }
+        } catch (_) {}
+
+        try {
+            if (this._wmSettings) {
+                for (const key of ["maximize", "unmaximize"]) {
+                    const saved = this._savedGnomeBindings[`wm:${key}`];
+                    if (saved) this._wmSettings.set_strv(key, saved);
+                }
+            }
+        } catch (_) {}
+
+        try {
+            if (this._mutterKbSettings) {
+                for (const key of ["toggle-tiled-left", "toggle-tiled-right"]) {
+                    const saved = this._savedGnomeBindings[`mutter:${key}`];
+                    if (saved) this._mutterKbSettings.set_strv(key, saved);
+                }
+            }
+        } catch (_) {}
+
+        this._savedGnomeBindings = null;
+        this._mutterSettings = null;
+        this._wmSettings = null;
+        this._mutterKbSettings = null;
+        this._logger?.debug("Restored GNOME native tiling settings");
     }
 
     // ------------------------------------------------------------------ public API (used by Keybindings)
@@ -400,7 +491,7 @@ class FluxCutController {
         const win = global.display.get_focus_window();
         if (!win || !this._windowTracker) return;
 
-        if (win.get_maximized() === Meta.MaximizeFlags.BOTH) {
+        if (isFullyMaximized(win)) {
             win.unmaximize(Meta.MaximizeFlags.BOTH);
             return;
         }

@@ -10,6 +10,7 @@
 
 import GLib from "gi://GLib";
 import Meta from "gi://Meta";
+import { makeRect } from "./compat.js";
 
 export class WindowTracker {
     constructor(settings, zoneManager, multiMonitor, logger) {
@@ -317,7 +318,7 @@ export class WindowTracker {
         // Update the resized window's own stored rect
         const selfEntry = this._snapped.get(winId);
         if (selfEntry)
-            selfEntry.zoneRect = new Meta.Rectangle(
+            selfEntry.zoneRect = makeRect(
                 { x: newRect.x, y: newRect.y, width: newRect.width, height: newRect.height }
             );
 
@@ -349,7 +350,7 @@ export class WindowTracker {
             }
 
             if (changed && nw > 40 && nh > 40) {
-                oz.zoneRect = new Meta.Rectangle({ x: nx, y: ny, width: nw, height: nh });
+                oz.zoneRect = makeRect({ x: nx, y: ny, width: nw, height: nh });
                 other.move_resize_frame(true, nx, ny, nw, nh);
             }
         }

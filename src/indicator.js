@@ -119,7 +119,10 @@ const FluxCutIndicator = GObject.registerClass(
         }
 
         destroy() {
-            this._toggle?.destroy();
+            try {
+                this._toggle?.destroy();
+            } catch (_) { /* already disposed */ }
+            this._toggle = null;
             super.destroy();
         }
     }
@@ -147,8 +150,15 @@ export class Indicator {
 
     disable() {
         if (this._indicator) {
-            this._indicator.quickSettingsItems.forEach(i => i.destroy());
-            this._indicator.destroy();
+            // Destroy toggle items first, then the indicator itself.
+            // Guard against already-disposed widgets (GNOME may auto-destroy
+            // QuickSettings items when the panel is rebuilt or on lock screen).
+            try {
+                this._indicator.quickSettingsItems.forEach(i => i.destroy());
+            } catch (_) { /* already disposed */ }
+            try {
+                this._indicator.destroy();
+            } catch (_) { /* already disposed */ }
             this._indicator = null;
         }
         this._log?.info("Indicator: disabled");

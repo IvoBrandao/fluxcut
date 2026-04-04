@@ -6,6 +6,7 @@
 
 import Meta from "gi://Meta";
 import { getPresetById, PRESETS } from "./layoutPresets.js";
+import { makeRect, getMaximizeFlags } from "./compat.js";
 
 export class ZoneManager {
     constructor(settings, customZones, logger) {
@@ -153,7 +154,7 @@ export class ZoneManager {
         if (!metaWindow) return;
 
         // Must unmaximize before resizing (GNOME ignores move_resize on maximized windows)
-        const maxFlags = metaWindow.get_maximized?.() ?? 0;
+        const maxFlags = getMaximizeFlags(metaWindow);
         if (maxFlags) {
             metaWindow.unmaximize(Meta.MaximizeFlags.BOTH);
         }
@@ -199,7 +200,7 @@ export class ZoneManager {
         const h = Math.round(norm.h * wa.height - gap);
 
         // Clamp to workarea to avoid tiny rounding overflows
-        return new Meta.Rectangle({
+        return makeRect({
             x: Math.max(x, wa.x),
             y: Math.max(y, wa.y),
             width:  Math.max(w, 40),

@@ -187,6 +187,18 @@
     font-size: 11px;
 }
 
+.fluxcut-editor-instructions {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 16px;
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.50);
+    border-radius: 10px;
+    padding: 20px 32px;
+}
+
+.fluxcut-editor-error {
+    color: rgba(255, 100, 100, 1.0);
+}
 /* ============================================================
    Snap Groups Panel Button & Popup (snapGroups.js)
    ============================================================ */

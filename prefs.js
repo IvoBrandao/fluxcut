@@ -22,25 +22,25 @@ const KB_SCHEMA_ID = "org.gnome.shell.extensions.fluxcut.keybindings";
 
 // ── Keybinding names shown in Keybindings page ───────────────────────────────
 const KB_ROWS = [
-    { key: "snap-left-half",     label: "Snap left half" },
-    { key: "snap-right-half",    label: "Snap right half" },
-    { key: "snap-upper-quarter", label: "Snap upper quarter" },
-    { key: "snap-lower-quarter", label: "Snap lower quarter" },
-    { key: "snap-top-left",      label: "Snap top-left" },
-    { key: "snap-top-right",     label: "Snap top-right" },
-    { key: "snap-bottom-left",   label: "Snap bottom-left" },
-    { key: "snap-bottom-right",  label: "Snap bottom-right" },
-    { key: "move-swap-left",     label: "Move/swap window left" },
-    { key: "move-swap-right",    label: "Move/swap window right" },
-    { key: "move-swap-up",       label: "Move/swap window up" },
-    { key: "move-swap-down",     label: "Move/swap window down" },
-    { key: "open-snap-overlay",  label: "Open Snap Layout Picker" },
-    { key: "open-zone-editor",   label: "Open Zone Editor" },
-    { key: "move-monitor-left",  label: "Move window to left monitor" },
-    { key: "move-monitor-right", label: "Move window to right monitor" },
-    { key: "cycle-preset-next",  label: "Cycle preset forward" },
-    { key: "cycle-preset-prev",  label: "Cycle preset backward" },
-    { key: "restore-snap-group", label: "Restore last snap group" },
+    { key: "snap-left-half",     label: "Snap left half",           desc: "Snap focused window to the left 50%" },
+    { key: "snap-right-half",    label: "Snap right half",          desc: "Snap focused window to the right 50%" },
+    { key: "snap-upper-quarter", label: "Snap upper quarter",       desc: "Snap focused window to the top-left quarter" },
+    { key: "snap-lower-quarter", label: "Snap lower quarter",       desc: "Snap focused window to the bottom-left quarter" },
+    { key: "snap-top-left",      label: "Snap top-left",            desc: "Snap focused window to the top-left corner" },
+    { key: "snap-top-right",     label: "Snap top-right",           desc: "Snap focused window to the top-right corner" },
+    { key: "snap-bottom-left",   label: "Snap bottom-left",         desc: "Snap focused window to the bottom-left corner" },
+    { key: "snap-bottom-right",  label: "Snap bottom-right",        desc: "Snap focused window to the bottom-right corner" },
+    { key: "move-swap-left",     label: "Move/swap window left",    desc: "Move focused window one zone left, or swap with neighbor" },
+    { key: "move-swap-right",    label: "Move/swap window right",   desc: "Move focused window one zone right, or swap with neighbor" },
+    { key: "move-swap-up",       label: "Move/swap window up",      desc: "Move focused window one zone up, or swap with neighbor" },
+    { key: "move-swap-down",     label: "Move/swap window down",    desc: "Move focused window one zone down, or swap with neighbor" },
+    { key: "open-snap-overlay",  label: "Open Snap Layout Picker",  desc: "Show the Super+Z snap layout popup" },
+    { key: "open-zone-editor",   label: "Open Zone Editor",         desc: "Open the full-screen zone drawing editor" },
+    { key: "move-monitor-left",  label: "Move to left monitor",     desc: "Move focused window to the monitor on the left" },
+    { key: "move-monitor-right", label: "Move to right monitor",    desc: "Move focused window to the monitor on the right" },
+    { key: "cycle-preset-next",  label: "Cycle preset forward",     desc: "Switch to the next layout preset" },
+    { key: "cycle-preset-prev",  label: "Cycle preset backward",    desc: "Switch to the previous layout preset" },
+    { key: "restore-snap-group", label: "Restore last snap group",  desc: "Reposition all windows to their last-saved snap group" },
 ];
 
 export default class FluxCutPreferences extends ExtensionPreferences {
@@ -178,11 +178,42 @@ export default class FluxCutPreferences extends ExtensionPreferences {
             icon_name: "input-keyboard-symbolic",
         });
 
-        const group = new Adw.PreferencesGroup({ title: "Configurable Shortcuts" });
+        const group = new Adw.PreferencesGroup({
+            title: "Configurable Shortcuts",
+            description: "Click \"Set Shortcut\" to type a key combination (e.g. <Super>Left).\n" +
+                         "FluxCut automatically overrides conflicting GNOME tiling shortcuts.",
+        });
         page.add(group);
 
-        for (const { key, label } of KB_ROWS)
-            group.add(this._keybindingRow(kbSettings, key, label));
+        for (const { key, label, desc } of KB_ROWS)
+            group.add(this._keybindingRow(kbSettings, key, label, desc));
+
+        // Reset all keybindings button
+        const resetGroup = new Adw.PreferencesGroup();
+        page.add(resetGroup);
+
+        const resetRow = new Adw.ActionRow({
+            title: "Reset All Keybindings",
+            subtitle: "Restore all shortcuts to their default values",
+        });
+        const resetBtn = new Gtk.Button({
+            label: "Reset",
+            valign: Gtk.Align.CENTER,
+            css_classes: ["destructive-action"],
+        });
+        resetBtn.connect("clicked", () => {
+            for (const { key } of KB_ROWS)
+                kbSettings.reset(key);
+            // Rebuild the page to refresh all labels
+            const window = page.get_root();
+            if (window) {
+                window.remove(page);
+                window.add(this._buildKeybindingsPage(kbSettings));
+            }
+        });
+        resetRow.add_suffix(resetBtn);
+        resetRow.set_activatable_widget(resetBtn);
+        resetGroup.add(resetRow);
 
         return page;
     }
@@ -336,8 +367,8 @@ export default class FluxCutPreferences extends ExtensionPreferences {
         widget.connect("destroy", () => settings.disconnect(h));
     }
 
-    _keybindingRow(kbSettings, key, label) {
-        const row = new Adw.ActionRow({ title: label });
+    _keybindingRow(kbSettings, key, label, subtitle) {
+        const row = new Adw.ActionRow({ title: label, subtitle: subtitle ?? "" });
 
         const shortcutLabel = new Gtk.ShortcutLabel({
             valign: Gtk.Align.CENTER,
@@ -347,23 +378,16 @@ export default class FluxCutPreferences extends ExtensionPreferences {
         const currentBindings = kbSettings.get_strv(key);
         shortcutLabel.set_accelerator(currentBindings[0] ?? "");
 
-        // Capture button — opens key capture dialog
-        const editBtn = new Gtk.Button({
-            icon_name: "input-keyboard-symbolic",
+        // Single "Set Shortcut" button — opens a dialog where user types the
+        // GTK accelerator string.  This always works, even for Super-based
+        // combos that the compositor would otherwise grab.
+        const setBtn = new Gtk.Button({
+            label: "Set Shortcut",
             valign: Gtk.Align.CENTER,
             css_classes: ["flat"],
-            tooltip_text: "Capture shortcut (press key combination)",
+            tooltip_text: "Type a shortcut string (e.g. <Super>Left)",
         });
-        editBtn.connect("clicked", () => this._captureShortcut(row, kbSettings, key, shortcutLabel));
-
-        // Type button — opens text entry for typing accelerator string
-        const typeBtn = new Gtk.Button({
-            icon_name: "document-edit-symbolic",
-            valign: Gtk.Align.CENTER,
-            css_classes: ["flat"],
-            tooltip_text: "Type shortcut (e.g. <Super>Left)",
-        });
-        typeBtn.connect("clicked", () => this._typeShortcut(row, kbSettings, key, shortcutLabel));
+        setBtn.connect("clicked", () => this._typeShortcut(row, kbSettings, key, shortcutLabel));
 
         const clearBtn = new Gtk.Button({
             icon_name: "edit-clear-symbolic",
@@ -377,110 +401,13 @@ export default class FluxCutPreferences extends ExtensionPreferences {
         });
 
         row.add_suffix(shortcutLabel);
-        row.add_suffix(editBtn);
-        row.add_suffix(typeBtn);
+        row.add_suffix(setBtn);
         row.add_suffix(clearBtn);
         return row;
     }
 
-    _captureShortcut(parentRow, kbSettings, key, shortcutLabel) {
-        const dialog = new Gtk.Dialog({
-            title: `Set shortcut for: ${parentRow.title}`,
-            modal: true,
-            resizable: false,
-        });
-
-        // Try to find the parent window
-        let topLevel = parentRow.get_root?.();
-        if (topLevel instanceof Gtk.Window)
-            dialog.set_transient_for(topLevel);
-
-        const content = dialog.get_content_area();
-        const hintLabel = new Gtk.Label({
-            label: "Press the desired key combination…\n" +
-                   "Press Escape to cancel.\n\n" +
-                   "Note: if the compositor grabs the key combo\n" +
-                   "(e.g. Super+Arrow), use the ✎ Type button instead.",
-            margin_top: 24,
-            margin_bottom: 12,
-            margin_start: 24,
-            margin_end: 24,
-        });
-        content.append(hintLabel);
-
-        const feedbackLabel = new Gtk.Label({
-            label: "",
-            margin_bottom: 24,
-            margin_start: 24,
-            margin_end: 24,
-            css_classes: ["dim-label"],
-        });
-        content.append(feedbackLabel);
-
-        // Known modifier keysyms — must be ignored as standalone presses
-        const MODIFIER_KEYSYMS = new Set([
-            Gdk.KEY_Shift_L, Gdk.KEY_Shift_R,
-            Gdk.KEY_Control_L, Gdk.KEY_Control_R,
-            Gdk.KEY_Alt_L, Gdk.KEY_Alt_R,
-            Gdk.KEY_Meta_L, Gdk.KEY_Meta_R,
-            Gdk.KEY_Hyper_L, Gdk.KEY_Hyper_R,
-        ]);
-        // Super_L/R may be undefined in some GTK4 GJS versions – add safely
-        if (Gdk.KEY_Super_L != null) MODIFIER_KEYSYMS.add(Gdk.KEY_Super_L);
-        if (Gdk.KEY_Super_R != null) MODIFIER_KEYSYMS.add(Gdk.KEY_Super_R);
-        if (Gdk.KEY_ISO_Level3_Shift != null) MODIFIER_KEYSYMS.add(Gdk.KEY_ISO_Level3_Shift);
-        if (Gdk.KEY_Mode_switch != null) MODIFIER_KEYSYMS.add(Gdk.KEY_Mode_switch);
-        // Extra: numeric keysyms that appear when Num Lock is active overlay
-        if (Gdk.KEY_Num_Lock != null) MODIFIER_KEYSYMS.add(Gdk.KEY_Num_Lock);
-        if (Gdk.KEY_Caps_Lock != null) MODIFIER_KEYSYMS.add(Gdk.KEY_Caps_Lock);
-
-        const controller = new Gtk.EventControllerKey();
-        controller.connect("key-pressed", (_c, keyval, keycode, state) => {
-            if (keyval === Gdk.KEY_Escape) {
-                dialog.close();
-                return true; // EVENT_STOP
-            }
-
-            // Ignore lone modifier presses — wait for the real key
-            if (MODIFIER_KEYSYMS.has(keyval)) {
-                // Show what modifiers are held so far
-                const mask = Gtk.accelerator_get_default_mod_mask();
-                const mods = state & mask;
-                const partial = Gtk.accelerator_name(0, mods);
-                if (partial)
-                    feedbackLabel.set_text(`Holding: ${partial}…`);
-                return true; // Consume to prevent WM from seeing lone Super
-            }
-
-            // Build the accelerator with cleaned modifier state
-            const mask = Gtk.accelerator_get_default_mod_mask();
-            const effectiveMods = state & mask;
-            const accel = Gtk.accelerator_name(keyval, effectiveMods);
-
-            if (!accel || accel.length < 2) {
-                feedbackLabel.set_text("Invalid key combination, try again.");
-                return true;
-            }
-
-            // Validate — Gtk.accelerator_parse returns [success, key, mods]
-            const [valid] = Gtk.accelerator_parse(accel);
-            if (!valid) {
-                feedbackLabel.set_text(`"${accel}" is not a valid shortcut.`);
-                return true;
-            }
-
-            kbSettings.set_strv(key, [accel]);
-            shortcutLabel.set_accelerator(accel);
-            dialog.close();
-            return true; // EVENT_STOP
-        });
-        dialog.add_controller(controller);
-
-        dialog.present();
-    }
-
     /**
-     * Alternative shortcut entry: user types the GTK accelerator string
+     * Shortcut entry: user types the GTK accelerator string
      * (e.g. "<Super>Left", "<Primary><Shift>a").
      * This bypasses compositor key grabs entirely.
      */

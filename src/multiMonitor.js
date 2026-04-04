@@ -34,26 +34,33 @@ export const MultiMonitorManager = GObject.registerClass(
         }
 
         enable() {
-            // Try both possible signals for monitor changes
             const display = global.display;
-            let monitorSignal = null;
-            if (typeof display.signal_names === "function" && display.signal_names().includes("monitors-changed")) {
-                monitorSignal = "monitors-changed";
-            } else if (typeof display.signal_names === "function" && display.signal_names().includes("monitors-config-changed")) {
-                monitorSignal = "monitors-config-changed";
-            } else {
-                // Fallback: try both, ignore errors
+
+            // monitors-changed signal location varies by GNOME version:
+            //   GNOME 45: global.display has monitors-changed
+            //   GNOME 46+: moved to Meta.MonitorManager (backend)
+            // Either way, workareas-changed (always on display) is a reliable
+            // fallback since it fires after any monitor reconfiguration.
+            let monitorConnected = false;
+
+            // Try backend monitor manager first (GNOME 46+)
+            try {
+                const monMgr = global.backend.get_monitor_manager();
+                if (monMgr) {
+                    this._monitorManager = monMgr;
+                    this._monMgrSignalId = monMgr.connect("monitors-changed", () => this._rebuild());
+                    monitorConnected = true;
+                }
+            } catch (_) { /* not available on this GNOME version */ }
+
+            // Fallback: try display.monitors-changed (GNOME 45)
+            if (!monitorConnected) {
                 try {
                     this._signalIds.push(display.connect("monitors-changed", () => this._rebuild()));
-                } catch {}
-                try {
-                    this._signalIds.push(display.connect("monitors-config-changed", () => this._rebuild()));
-                } catch {}
-                monitorSignal = null;
+                } catch (_) { /* signal not on display in this version */ }
             }
-            if (monitorSignal) {
-                this._signalIds.push(display.connect(monitorSignal, () => this._rebuild()));
-            }
+
+            // workareas-changed always exists and serves as a reliable catch-all
             this._signalIds.push(display.connect("workareas-changed", () => this._rebuild()));
             this._rebuild();
             this._loadPresetMap();
@@ -63,6 +70,11 @@ export const MultiMonitorManager = GObject.registerClass(
             for (const id of this._signalIds)
                 global.display.disconnect(id);
             this._signalIds = [];
+            if (this._monMgrSignalId && this._monitorManager) {
+                this._monitorManager.disconnect(this._monMgrSignalId);
+                this._monMgrSignalId = null;
+                this._monitorManager = null;
+            }
         }
 
         // ------------------------------------------------------------------ monitors

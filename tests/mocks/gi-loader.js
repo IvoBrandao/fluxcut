@@ -249,6 +249,7 @@ const STUBS = new Map([
     ["gi://GObject",  GObjectStub],
     ["gi://GLib",     GLibStub],
     ["gi://Meta",     MetaStub],
+    ["gi://Mtk",      { Rectangle: MetaRectangle }],
     ["gi://Gio",      GioStub],
     ["gi://Clutter",  ClutterStub],
     ["gi://Shell",    { ActionMode: { NORMAL: 1, OVERVIEW: 2, ALL: 0xFFFFFFFF }, WindowTracker: { get_default: () => ({ get_window_app: () => null }) } }],

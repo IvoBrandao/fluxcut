@@ -67,19 +67,33 @@ export class ZoneEditor {
         this._backdrop = new St.Widget({
             style_class: "fluxcut-editor-backdrop",
             reactive: true,
+            can_focus: true,
         });
         this._backdrop.set_position(geom.x, geom.y);
         this._backdrop.set_size(geom.width, geom.height);
 
         // Canvas for zone actors (sits on top of backdrop)
         this._canvas = new St.Widget({
-            reactive: true,
+            reactive: false,
             can_focus: false,
-            track_hover: true,
         });
         this._canvas.set_position(0, 0);
         this._canvas.set_size(geom.width, geom.height);
         this._backdrop.add_child(this._canvas);
+
+        // Instruction overlay (shown initially, hidden after first zone drawn)
+        this._instructionLabel = new St.Label({
+            text: _("Click and drag to draw zones\n" +
+                     "Drag corner/edge handles to resize\n" +
+                     "Middle-click a zone to delete it\n" +
+                     "Press Escape to cancel"),
+            style_class: "fluxcut-editor-instructions",
+        });
+        this._instructionLabel.set_position(
+            Math.round(geom.width / 2 - 200),
+            Math.round(geom.height / 2 - 60)
+        );
+        this._backdrop.add_child(this._instructionLabel);
 
         // Toolbar at bottom
         this._toolbar = this._buildToolbar();
@@ -100,8 +114,10 @@ export class ZoneEditor {
             }
         }
 
-        // Use captured-event to intercept all events before child actors
-        this._captureId = this._canvas.connect("captured-event", (_a, event) => {
+        // Use captured-event on the backdrop to intercept all pointer events.
+        // The backdrop has a visible background so Clutter delivers events to it
+        // reliably (unlike a transparent canvas widget).
+        this._captureId = this._backdrop.connect("captured-event", (_a, event) => {
             const type = event.type();
 
             if (type === Clutter.EventType.BUTTON_PRESS) {
@@ -110,16 +126,24 @@ export class ZoneEditor {
                 return this._onMotion(event);
             } else if (type === Clutter.EventType.BUTTON_RELEASE) {
                 return this._onRelease(event);
+            } else if (type === Clutter.EventType.KEY_PRESS) {
+                const sym = event.get_key_symbol();
+                if (sym === 0xFF1B /* Escape */) {
+                    this.close();
+                    return Clutter.EVENT_STOP;
+                }
             }
             return Clutter.EVENT_PROPAGATE;
         });
+
+        this._backdrop.grab_key_focus();
     }
 
     close() {
         if (!this._backdrop) return;
 
         if (this._captureId) {
-            this._canvas.disconnect(this._captureId);
+            this._backdrop.disconnect(this._captureId);
             this._captureId = null;
         }
 
@@ -128,6 +152,7 @@ export class ZoneEditor {
         this._canvas = null;
         this._toolbar = null;
         this._nameEntry = null;
+        this._instructionLabel = null;
         this._zones = [];
         this._drawing = false;
         this._rubberband = null;
@@ -303,9 +328,15 @@ export class ZoneEditor {
             return Clutter.EVENT_PROPAGATE;
 
         const [cx, cy] = event.get_coords();
-        const [ox, oy] = this._canvas.get_transformed_position();
+        const [ox, oy] = this._backdrop.get_transformed_position();
         const lx = cx - ox;
         const ly = cy - oy;
+
+        // Ignore clicks on the toolbar area
+        const geom = global.display.get_monitor_geometry(this._monitorIndex);
+        const toolbarH = 56;
+        if (ly > geom.height - toolbarH)
+            return Clutter.EVENT_PROPAGATE;
 
         // Check if pressing a handle
         const source = event.get_source();
@@ -324,25 +355,26 @@ export class ZoneEditor {
             }
         }
 
-        // Start rubber-band draw on empty canvas
-        if (source === this._canvas || source === this._backdrop) {
-            this._drawing = true;
-            this._drawStart = { x: lx, y: ly };
+        // Start rubber-band draw anywhere in the canvas area
+        this._drawing = true;
+        this._drawStart = { x: lx, y: ly };
 
-            this._rubberband = new St.Bin({ style_class: "fluxcut-editor-rubberband" });
-            this._rubberband.set_position(lx, ly);
-            this._rubberband.set_size(1, 1);
-            this._canvas.add_child(this._rubberband);
+        this._rubberband = new St.Bin({ style_class: "fluxcut-editor-rubberband" });
+        this._rubberband.set_position(lx, ly);
+        this._rubberband.set_size(1, 1);
+        this._canvas.add_child(this._rubberband);
 
-            return Clutter.EVENT_STOP;
+        // Hide instructions once user starts drawing
+        if (this._instructionLabel) {
+            this._instructionLabel.hide();
         }
 
-        return Clutter.EVENT_PROPAGATE;
+        return Clutter.EVENT_STOP;
     }
 
     _onMotion(event) {
         const [cx, cy] = event.get_coords();
-        const [ox, oy] = this._canvas.get_transformed_position();
+        const [ox, oy] = this._backdrop.get_transformed_position();
         const lx = cx - ox;
         const ly = cy - oy;
 
@@ -371,7 +403,7 @@ export class ZoneEditor {
             return Clutter.EVENT_PROPAGATE;
 
         const [cx, cy] = event.get_coords();
-        const [ox, oy] = this._canvas.get_transformed_position();
+        const [ox, oy] = this._backdrop.get_transformed_position();
         const lx = cx - ox;
         const ly = cy - oy;
 
@@ -467,6 +499,13 @@ export class ZoneEditor {
 
         if (activeZones.length === 0) {
             this._log?.warn("ZoneEditor: cannot save with 0 zones");
+            if (this._statusLabel) {
+                this._statusLabel.text = _("Draw at least one zone before saving");
+                this._statusLabel.add_style_class_name?.("fluxcut-editor-error");
+            }
+            // Re-show instructions
+            if (this._instructionLabel)
+                this._instructionLabel.show();
             return;
         }
 
