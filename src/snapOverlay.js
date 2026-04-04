@@ -1,6 +1,6 @@
 /**
  * FluxCut — src/snapOverlay.js
- * The Win+Z snap layout picker popup.
+ * The Super+Z snap layout picker popup.
  *
  * Appears top-center (or top-right, per settings) on the focused window's
  * monitor. Shows one button per preset; hover highlights zones; click snaps.
@@ -220,15 +220,18 @@ export class SnapOverlay {
             return;
         }
 
-        const rects = this._zoneManager.getZoneRects(preset.id, monitorIndex);
+        // Set this as the active preset for the monitor (so future
+        // drags and keybindings use the selected layout)
+        this._multiMonitor.setActivePreset(monitorIndex, preset.id);
+
+        const rects = this._zoneManager.getZoneRects(preset.id, monitorIndex, this._settings.windowGapSize);
         if (!rects.length) {
             this.close();
             return;
         }
 
         const firstRect = rects[0];
-        const animate = this._animations.duration > 0;
-        this._windowTracker.snapWindow(win, preset.id, 0, firstRect, animate, this._animations);
+        this._windowTracker.snapWindow(win, preset.id, 0, firstRect);
 
         // Scale snap feedback
         const actor = win.get_compositor_private();

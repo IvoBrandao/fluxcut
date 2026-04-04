@@ -198,11 +198,14 @@ export const DragDetector = GObject.registerClass(
             const nearBottom = py > y + h - C;
 
             const g = this._settings.windowGapSize ?? 0;
+            // Gap logic matches ZoneManager._normToPixel: half-gap inset on
+            // each edge (giving full-gap between adjacent zones).
+            const halfG = g / 2;
             const mk = (rx, ry, rw, rh) => new Meta.Rectangle({
-                x:      Math.round(rx + g),
-                y:      Math.round(ry + g),
-                width:  Math.round(rw - g * 2),
-                height: Math.round(rh - g * 2),
+                x:      Math.round(rx + halfG),
+                y:      Math.round(ry + halfG),
+                width:  Math.round(rw - g),
+                height: Math.round(rh - g),
             });
 
             // Corners (evaluated first — highest priority)

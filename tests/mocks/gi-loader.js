@@ -47,7 +47,14 @@ const GObjectStub = (() => {
     const TYPE_DOUBLE  = "gdouble";
 
     class ObjectBase {
-        constructor() { this._signalHandlers = new Map(); }
+        constructor(...args) {
+            this._signalHandlers = new Map();
+            // In real GObject, the constructor calls _init().
+            // Replicate that so subclasses initialise their fields.
+            if (typeof this._init === "function")
+                this._init(...args);
+        }
+        _init() {}
         connect(signal, cb) {
             if (!this._signalHandlers.has(signal)) this._signalHandlers.set(signal, []);
             const id = Math.random();
@@ -55,8 +62,8 @@ const GObjectStub = (() => {
             return id;
         }
         disconnect(id) {
-            for (const [, cbs] of this._signalHandlers)
-                this._signalHandlers.set(signal, cbs.filter(h => h.id !== id));
+            for (const [sig, cbs] of this._signalHandlers)
+                this._signalHandlers.set(sig, cbs.filter(h => h.id !== id));
         }
         emit(signal, ...args) {
             const handlers = this._signalHandlers.get(signal) ?? [];
@@ -76,6 +83,7 @@ const GObjectStub = (() => {
 
 const GLibStub = (() => {
     const PRIORITY_DEFAULT = 0;
+    const PRIORITY_DEFAULT_IDLE = 200;
     const SOURCE_REMOVE = false;
     const SOURCE_CONTINUE = true;
 
@@ -92,7 +100,7 @@ const GLibStub = (() => {
 
     const Source = { remove: (_id) => {} };
 
-    return { PRIORITY_DEFAULT, SOURCE_REMOVE, SOURCE_CONTINUE, timeout_add, idle_add, Source };
+    return { PRIORITY_DEFAULT, PRIORITY_DEFAULT_IDLE, SOURCE_REMOVE, SOURCE_CONTINUE, timeout_add, idle_add, Source };
 })();
 
 // ── Meta.Rectangle (pure data class used extensively) ────────────────────────
@@ -109,6 +117,7 @@ class MetaRectangle {
 const MetaStub = {
     Rectangle: MetaRectangle,
     MaximizeFlags: { BOTH: 3, HORIZONTAL: 1, VERTICAL: 2 },
+    KeyBindingFlags: { NONE: 0, IS_REVERSED: 1 },
     GrabOp: { MOVING: 1 },
     DisplayDirection: { LEFT: 0, RIGHT: 1, UP: 2, DOWN: 3 },
 };
@@ -127,7 +136,114 @@ const ClutterStub = {
     EventType: { BUTTON_PRESS: 1 },
 };
 
+// ── St (UI widget constructors) ──────────────────────────────────────────────
+// Hand-coded source string so the generated ESM contains real classes that
+// tests (and source code) can instantiate via `new St.Bin(...)` etc.
+
+const ST_MODULE_SOURCE = `
+class _StBase {
+    constructor(props = {}) {
+        this._children = [];
+        this.opacity = 255;
+        this.x = 0;
+        this.y = 0;
+        this.width = 0;
+        this.height = 0;
+        this.visible = true;
+        this.reactive = false;
+        this.can_focus = false;
+        this.track_hover = false;
+        this.style_class = "";
+        this._signalHandlers = {};
+        Object.assign(this, props);
+    }
+    add_child(c) { this._children.push(c); }
+    remove_child(c) { this._children = this._children.filter(x => x !== c); }
+    remove_all_children() { this._children = []; }
+    destroy() { this._children = []; }
+    set_position(x, y) { this.x = x; this.y = y; }
+    set_size(w, h) { this.width = w; this.height = h; }
+    get_transformed_position() { return [this.x, this.y]; }
+    connect(signal, cb) {
+        if (!this._signalHandlers[signal]) this._signalHandlers[signal] = [];
+        const id = Math.random();
+        this._signalHandlers[signal].push({ id, cb });
+        return id;
+    }
+    disconnect(id) {
+        for (const [sig, cbs] of Object.entries(this._signalHandlers))
+            this._signalHandlers[sig] = cbs.filter(h => h.id !== id);
+    }
+    emit(signal, ...args) {
+        (this._signalHandlers[signal] ?? []).forEach(({ cb }) => cb(this, ...args));
+    }
+    hide() { this.visible = false; }
+    show() { this.visible = true; }
+    grab_key_focus() {}
+    ensure_style() {}
+    contains(c) { return this._children.includes(c); }
+    ease(params) {
+        if (params.opacity !== undefined) this.opacity = params.opacity;
+        if (params.x !== undefined) this.x = params.x;
+        if (params.y !== undefined) this.y = params.y;
+        if (params.width !== undefined) this.width = params.width;
+        if (params.height !== undefined) this.height = params.height;
+        if (params.onComplete) params.onComplete();
+    }
+    set_child(c) { this._children = [c]; }
+}
+
+export class Bin extends _StBase {}
+export class BoxLayout extends _StBase {}
+export class Button extends _StBase {}
+export class Label extends _StBase {
+    get_text() { return this.text ?? ""; }
+}
+export class Entry extends _StBase {
+    get_text() { return this.text ?? ""; }
+}
+export class Icon extends _StBase {}
+export class Widget extends _StBase {}
+export class ScrollView extends _StBase {}
+
+export default { Bin, BoxLayout, Button, Label, Entry, Icon, Widget, ScrollView };
+`;
+
+// ── Main (mutable live bindings via let + globalThis setter) ─────────────────
+// Tests need to replace Main.wm, Main.uiGroup etc. ESM namespace properties
+// are read-only, so we use let bindings + a globalThis setter function that
+// updates them from inside the module.
+
+const MAIN_MODULE_SOURCE = `
+let panel = {};
+let overview = {};
+let sessionMode = {};
+let wm = {};
+let extensionManager = {};
+let uiGroup = {};
+
+globalThis.__fluxcutMainSet__ = function _setMain(prop, value) {
+    switch (prop) {
+        case "panel": panel = value; break;
+        case "overview": overview = value; break;
+        case "sessionMode": sessionMode = value; break;
+        case "wm": wm = value; break;
+        case "extensionManager": extensionManager = value; break;
+        case "uiGroup": uiGroup = value; break;
+    }
+};
+
+export { panel, overview, sessionMode, wm, extensionManager, uiGroup };
+export default { panel, overview, sessionMode, wm, extensionManager, uiGroup };
+`;
+
 // ── Mapping from specifier → stub module ─────────────────────────────────────
+
+// Specifiers that have hand-crafted module source (not auto-serialized)
+const HARDCODED_SOURCES = new Map([
+    ["gi://St",                                          ST_MODULE_SOURCE],
+    ["resource:///org/gnome/shell/ui/main.js",           MAIN_MODULE_SOURCE],
+]);
 
 const STUBS = new Map([
     ["gi://GObject",  GObjectStub],
@@ -135,10 +251,7 @@ const STUBS = new Map([
     ["gi://Meta",     MetaStub],
     ["gi://Gio",      GioStub],
     ["gi://Clutter",  ClutterStub],
-    // Modules only used by UI layers (St, Shell, Adw, Gtk, Gdk) — return empty
-    // stubs; tests shouldn't reach UI code directly.
-    ["gi://St",       {}],
-    ["gi://Shell",    {}],
+    ["gi://Shell",    { ActionMode: { NORMAL: 1, OVERVIEW: 2, ALL: 0xFFFFFFFF }, WindowTracker: { get_default: () => ({ get_window_app: () => null }) } }],
     ["gi://Adw",      {}],
     ["gi://Gtk",      {}],
     ["gi://Gdk",      {}],
@@ -146,7 +259,6 @@ const STUBS = new Map([
 
 // resource:/// imports (GNOME Shell UI) → empty stubs
 const RESOURCE_STUBS = new Map([
-    ["resource:///org/gnome/shell/ui/main.js",              { panel: {}, overview: {}, sessionMode: {}, wm: {}, extensionManager: {} }],
     ["resource:///org/gnome/shell/ui/quickSettings.js",     {}],
     ["resource:///org/gnome/shell/ui/popupMenu.js",         {}],
     ["resource:///org/gnome/shell/extensions/extension.js", { Extension: class Extension {} }],
@@ -184,7 +296,7 @@ function serializeValue(v) {
 }
 
 export function resolve(specifier, context, nextResolve) {
-    if (STUBS.has(specifier) || RESOURCE_STUBS.has(specifier)) {
+    if (HARDCODED_SOURCES.has(specifier) || STUBS.has(specifier) || RESOURCE_STUBS.has(specifier)) {
         return { url: `${STUB_SCHEME}${encodeURIComponent(specifier)}`, shortCircuit: true };
     }
     return nextResolve(specifier, context);
@@ -193,6 +305,12 @@ export function resolve(specifier, context, nextResolve) {
 export function load(url, context, nextLoad) {
     if (url.startsWith(STUB_SCHEME)) {
         const specifier = decodeURIComponent(url.slice(STUB_SCHEME.length));
+
+        // Hand-crafted modules (St, Main) — return pre-built source directly
+        if (HARDCODED_SOURCES.has(specifier)) {
+            return { format: "module", source: HARDCODED_SOURCES.get(specifier), shortCircuit: true };
+        }
+
         const stubObj = STUBS.get(specifier) ?? RESOURCE_STUBS.get(specifier) ?? {};
 
         // Serialize each stub value inline so the generated module is fully

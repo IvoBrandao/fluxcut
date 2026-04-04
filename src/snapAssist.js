@@ -202,9 +202,8 @@ export class SnapAssist {
     _onThumbnailClicked(metaWindow, presetId, monitorIndex, workspaceIndex, zone) {
         this._stopDismissTimer();
 
-        const animate = this._animations.duration > 0;
         this._windowTracker.snapWindow(
-            metaWindow, presetId, zone.zoneIndex, zone.rect, animate, this._animations
+            metaWindow, presetId, zone.zoneIndex, zone.rect
         );
 
         // Remove this overlay; remaining zones will be re-triggered by

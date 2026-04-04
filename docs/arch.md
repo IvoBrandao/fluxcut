@@ -10,7 +10,7 @@
 2. [Features](#features)
    - [Zone System & Layout Presets](#zone-system--layout-presets)
    - [Drag-to-Edge Snapping](#drag-to-edge-snapping)
-   - [Snap Layout Overlay (Win+Z)](#snap-layout-overlay-winz)
+   - [Snap Layout Overlay (Super+Z)](#snap-layout-overlay-winz)
    - [Snap Assist](#snap-assist)
    - [Snap Groups](#snap-groups)
    - [Zone Highlights](#zone-highlights)
@@ -145,7 +145,7 @@ On drag end, `DragDetector` emits `"zone-selected"`. If the last hovered zone ha
 
 ---
 
-### Snap Layout Overlay (Win+Z)
+### Snap Layout Overlay (Super+Z)
 
 **Module:** `src/snapOverlay.js`
 
@@ -369,18 +369,17 @@ Cross-monitor window moves (`moveFocusedToMonitor`) use `findClosestZoneIndex` t
 
 Adds a `FluxCutToggle` entry to the GNOME Quick Settings panel (the area opened by clicking the top-right corner). Uses the GNOME 43+ `QuickMenuToggle` API.
 
-```
-┌──────────────────────────────┐
-│  ⊞ FluxCut              [ON] │
-│  ─────────────────────────── │
-│  Snap Layout Picker    [ON]  │
-│  Snap Assist           [ON]  │
-│  Zone Highlights       [ON]  │
-│  Snap Groups in Panel  [ON]  │
-│  ─────────────────────────── │
-│  Edit Zones…                 │
-│  Preferences…                │
-└──────────────────────────────┘
+```mermaid
+block-beta
+  columns 1
+  A["⊞ FluxCut ──────────────────────────────── toggle ON/OFF"]
+  B["  ├─ Snap Layout Picker ───────────────── ON / OFF"]
+  C["  ├─ Snap Assist ────────────────────────  ON / OFF"]
+  D["  ├─ Zone Highlights on Drag ──────────  ON / OFF"]
+  E["  ├─ Snap Groups in Panel ───────────── ON / OFF"]
+  F["  ├─ ─────────────────────────────────────────── "]
+  G["  ├─ Edit Zones…  (opens Zone Editor)"]
+  H["  └─ Preferences…  (opens extension prefs)"]
 ```
 
 All toggles are bound directly to GSettings keys via `Gio.SettingsBindFlags.DEFAULT`, so changes take effect immediately without a restart.
@@ -489,7 +488,7 @@ All settings live under the schema `org.gnome.shell.extensions.fluxcut`.
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `fluxcut-enabled` | boolean | `true` | Master on/off switch |
-| `snap-overlay-enabled` | boolean | `true` | Enable Win+Z overlay |
+| `snap-overlay-enabled` | boolean | `true` | Enable Super+Z overlay |
 | `snap-assist-enabled` | boolean | `true` | Enable Snap Assist thumbnails |
 | `drag-zone-highlight-enabled` | boolean | `true` | Highlight zones during drag |
 | `snap-groups-enabled` | boolean | `true` | Track & restore snap groups |

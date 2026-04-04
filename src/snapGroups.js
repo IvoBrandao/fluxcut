@@ -74,9 +74,7 @@ export class SnapGroupsManager {
         for (const { metaWindow, entry } of group.members) {
             this._windowTracker._zoneManager.assignWindowToZone(
                 metaWindow,
-                entry.zoneRect,
-                true,
-                this._animations
+                entry.zoneRect
             );
         }
 

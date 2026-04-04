@@ -35,6 +35,7 @@ function makeDisplay({ monitors = [{ x: 0, y: 0, width: 1920, height: 1080 }] } 
         get_focus_window: () => focusWindow,
         list_all_windows: () => [],
         get_monitor_neighbor_index: (_idx, _dir) => -1,
+        get_current_time: () => 0,
         connect: (signal, cb) => {
             if (!signalHandlers.has(signal)) signalHandlers.set(signal, []);
             const id = Symbol(signal);
@@ -81,32 +82,42 @@ let _pointer = [0, 0];
 
 // ── global.stage stub ─────────────────────────────────────────────────────────
 
-const stage = {
-    connect: () => Symbol("stage-signal"),
-    disconnect: () => {},
-};
+function makeStage() {
+    return {
+        connect: () => Symbol("stage-signal"),
+        disconnect: () => {},
+    };
+}
 
 // ── global.window_group stub ──────────────────────────────────────────────────
 
-const window_group = {
-    _children: [],
-    add_child: (c) => window_group._children.push(c),
-    remove_child: (c) => { window_group._children = window_group._children.filter(x => x !== c); },
-    contains: (c) => window_group._children.includes(c),
-};
+function makeWindowGroup() {
+    const wg = {
+        _children: [],
+        add_child: (c) => wg._children.push(c),
+        remove_child: (c) => { wg._children = wg._children.filter(x => x !== c); },
+        contains: (c) => wg._children.includes(c),
+    };
+    return wg;
+}
 
 // ── global.window_manager stub ────────────────────────────────────────────────
 
-const window_manager = {
-    connect: () => Symbol("wm-signal"),
-    disconnect: () => {},
-};
+function makeWindowManager() {
+    return {
+        connect: () => Symbol("wm-signal"),
+        disconnect: () => {},
+    };
+}
 
 // ── Export setup function ─────────────────────────────────────────────────────
 
 export function setupGnomeGlobals(opts = {}) {
     const display = makeDisplay(opts);
     const workspace_manager = makeWorkspaceManager(opts);
+    const stage = makeStage();
+    const window_group = makeWindowGroup();
+    const window_manager = makeWindowManager();
 
     globalThis.global = {
         display,

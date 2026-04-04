@@ -74,10 +74,8 @@ export class WindowTracker {
      * @param {string} presetId
      * @param {number} zoneIndex
      * @param {Meta.Rectangle} zoneRect
-     * @param {boolean} [animate=true]
-     * @param {Animations} [animations]
      */
-    snapWindow(metaWindow, presetId, zoneIndex, zoneRect, animate = true, animations = null) {
+    snapWindow(metaWindow, presetId, zoneIndex, zoneRect) {
         const windowId = metaWindow.get_id();
         const monitorIndex = metaWindow.get_monitor();
         const workspaceIndex = metaWindow.get_workspace().index();
@@ -89,7 +87,7 @@ export class WindowTracker {
             `WindowTracker: snap win=${windowId} preset=${presetId} zone=${zoneIndex}`
         );
 
-        this._zoneManager.assignWindowToZone(metaWindow, zoneRect, animate, animations);
+        this._zoneManager.assignWindowToZone(metaWindow, zoneRect);
 
         // Trigger Snap Assist for remaining unfilled zones
         if (this._snapAssist && this._settings.snapAssistEnabled) {
@@ -100,8 +98,8 @@ export class WindowTracker {
                 .filter(z => !filledZoneIndices.includes(z.zoneIndex));
 
             if (remaining.length > 0) {
-                // Small delay so window finishes animating first
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
+                // Brief delay so Mutter finishes the window transition
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
                     this._snapAssist?.show(presetId, monitorIndex, workspaceIndex, remaining);
                     return GLib.SOURCE_REMOVE;
                 });
@@ -365,14 +363,12 @@ export class WindowTracker {
      *
      * @param {Meta.Window} originWindow   - window that was already moved
      * @param {number}      newMonitorIndex
-     * @param {Animations}  [animations]
      */
-    moveGroupToMonitor(originWindow, newMonitorIndex, animations) {
+    moveGroupToMonitor(originWindow, newMonitorIndex) {
         const group = this.getSnapGroup(originWindow);
         if (group.length < 2) return;
 
         const originId = originWindow.get_id();
-        const animate  = animations?.duration > 0;
 
         for (const { metaWindow: win, entry } of group) {
             if (win.get_id() === originId) continue;
@@ -384,7 +380,7 @@ export class WindowTracker {
             if (!newRect) continue;
 
             win.move_to_monitor(newMonitorIndex);
-            this.snapWindow(win, entry.presetId, entry.zoneIndex, newRect, animate, animations);
+            this.snapWindow(win, entry.presetId, entry.zoneIndex, newRect);
         }
     }
 
@@ -425,6 +421,13 @@ export class WindowTracker {
     }
 
     _findWindowById(windowId) {
+        // Use compositor actors for O(n) lookup without workspace iteration
+        const actors = global.get_window_actors?.() ?? [];
+        for (const actor of actors) {
+            const w = actor.meta_window;
+            if (w && w.get_id() === windowId) return w;
+        }
+        // Fallback for edge cases
         for (const win of this._getAllWindows()) {
             if (win.get_id() === windowId)
                 return win;

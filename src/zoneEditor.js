@@ -50,9 +50,7 @@ export class ZoneEditor {
         // Drag resize state
         this._draggingHandle = null; // { zoneIdx, edge, startX, startY, origRect }
 
-        this._pressId = null;
-        this._motionId = null;
-        this._releaseId = null;
+        this._captureId = null;
     }
 
     // ------------------------------------------------------------------ public
@@ -74,7 +72,11 @@ export class ZoneEditor {
         this._backdrop.set_size(geom.width, geom.height);
 
         // Canvas for zone actors (sits on top of backdrop)
-        this._canvas = new St.Widget({ reactive: true });
+        this._canvas = new St.Widget({
+            reactive: true,
+            can_focus: false,
+            track_hover: true,
+        });
         this._canvas.set_position(0, 0);
         this._canvas.set_size(geom.width, geom.height);
         this._backdrop.add_child(this._canvas);
@@ -98,18 +100,28 @@ export class ZoneEditor {
             }
         }
 
-        // Specific signal connections — avoids Clutter.EventType dispatch
-        this._pressId   = this._canvas.connect("button-press-event",  (_a, e) => this._onPress(e));
-        this._motionId  = this._canvas.connect("motion-event",         (_a, e) => this._onMotion(e));
-        this._releaseId = this._canvas.connect("button-release-event", (_a, e) => this._onRelease(e));
+        // Use captured-event to intercept all events before child actors
+        this._captureId = this._canvas.connect("captured-event", (_a, event) => {
+            const type = event.type();
+
+            if (type === Clutter.EventType.BUTTON_PRESS) {
+                return this._onPress(event);
+            } else if (type === Clutter.EventType.MOTION) {
+                return this._onMotion(event);
+            } else if (type === Clutter.EventType.BUTTON_RELEASE) {
+                return this._onRelease(event);
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
     }
 
     close() {
         if (!this._backdrop) return;
 
-        if (this._pressId)   { this._canvas.disconnect(this._pressId);   this._pressId   = null; }
-        if (this._motionId)  { this._canvas.disconnect(this._motionId);  this._motionId  = null; }
-        if (this._releaseId) { this._canvas.disconnect(this._releaseId); this._releaseId = null; }
+        if (this._captureId) {
+            this._canvas.disconnect(this._captureId);
+            this._captureId = null;
+        }
 
         const backdrop = this._backdrop;
         this._backdrop = null;
@@ -200,20 +212,22 @@ export class ZoneEditor {
         for (const h of handles)
             this._canvas.add_child(h);
 
-        const idx = this._zones.length;
-        this._zones.push({ normRect, actor, handles });
+        // Use object reference (not array index) so deletion stays correct
+        // even after other zones are removed.
+        const zone = { normRect, actor, handles };
+        this._zones.push(zone);
 
         // Middle-click to delete
         actor.connect("button-press-event", (_a, event) => {
             if (event.get_button() === 2) { // middle button
-                this._deleteZone(idx);
+                this._deleteZone(zone);
                 return true;
             }
             return false;
         });
 
         this._updateStatus();
-        return idx;
+        return this._zones.length - 1;
     }
 
     _buildHandles(actor, normRect, geom) {
@@ -255,18 +269,15 @@ export class ZoneEditor {
         );
     }
 
-    _deleteZone(idx) {
-        const zone = this._zones[idx];
-        if (!zone) return;
+    _deleteZone(zoneEntry) {
+        const idx = this._zones.indexOf(zoneEntry);
+        if (idx === -1) return;
 
-        zone.actor.destroy();
-        for (const h of zone.handles)
+        zoneEntry.actor.destroy();
+        for (const h of zoneEntry.handles)
             h.destroy();
 
         this._zones.splice(idx, 1);
-        // Re-wire remaining delete handlers with updated indices is complex;
-        // simpler to mark as deleted and filter on save.
-        zone._deleted = true;
         this._updateStatus();
     }
 
@@ -280,7 +291,7 @@ export class ZoneEditor {
     }
 
     _updateStatus() {
-        const count = this._zones.filter(z => !z._deleted).length;
+        const count = this._zones.length;
         if (this._statusLabel)
             this._statusLabel.text = `${count} ${count === 1 ? _("zone") : _("zones")}`;
     }
@@ -289,7 +300,7 @@ export class ZoneEditor {
 
     _onPress(event) {
         if (event.get_button() !== 1) // primary button
-            return false;
+            return Clutter.EVENT_PROPAGATE;
 
         const [cx, cy] = event.get_coords();
         const [ox, oy] = this._canvas.get_transformed_position();
@@ -300,16 +311,16 @@ export class ZoneEditor {
         const source = event.get_source();
         if (source._fluxcutEdge) {
             const targetActor = source._fluxcutZoneActor;
-            const zoneIdx = this._zones.findIndex(z => z.actor === targetActor);
-            if (zoneIdx !== -1) {
+            const zone = this._zones.find(z => z.actor === targetActor);
+            if (zone) {
                 this._draggingHandle = {
-                    zoneIdx,
+                    zone,
                     edge: source._fluxcutEdge,
                     startX: lx,
                     startY: ly,
-                    origRect: { ...this._zones[zoneIdx].normRect },
+                    origRect: { ...zone.normRect },
                 };
-                return true;
+                return Clutter.EVENT_STOP;
             }
         }
 
@@ -323,10 +334,10 @@ export class ZoneEditor {
             this._rubberband.set_size(1, 1);
             this._canvas.add_child(this._rubberband);
 
-            return true;
+            return Clutter.EVENT_STOP;
         }
 
-        return false;
+        return Clutter.EVENT_PROPAGATE;
     }
 
     _onMotion(event) {
@@ -344,20 +355,20 @@ export class ZoneEditor {
             const h = Math.abs(ly - this._drawStart.y);
             this._rubberband.set_position(x, y);
             this._rubberband.set_size(Math.max(w, 1), Math.max(h, 1));
-            return true;
+            return Clutter.EVENT_STOP;
         }
 
         if (this._draggingHandle) {
             this._applyHandleDrag(lx, ly, geom);
-            return true;
+            return Clutter.EVENT_STOP;
         }
 
-        return false;
+        return Clutter.EVENT_PROPAGATE;
     }
 
     _onRelease(event) {
         if (event.get_button() !== 1) // primary button
-            return false;
+            return Clutter.EVENT_PROPAGATE;
 
         const [cx, cy] = event.get_coords();
         const [ox, oy] = this._canvas.get_transformed_position();
@@ -388,23 +399,23 @@ export class ZoneEditor {
                 }
             }
             this._drawStart = null;
-            return true;
+            return Clutter.EVENT_STOP;
         }
 
         if (this._draggingHandle) {
             this._draggingHandle = null;
-            return true;
+            return Clutter.EVENT_STOP;
         }
 
-        return false;
+        return Clutter.EVENT_PROPAGATE;
     }
 
     _applyHandleDrag(lx, ly, geom) {
         const dh = this._draggingHandle;
         if (!dh) return;
 
-        const zone = this._zones[dh.zoneIdx];
-        if (!zone || zone._deleted) return;
+        const zone = dh.zone;
+        if (!zone || !this._zones.includes(zone)) return;
 
         const dx = (lx - dh.startX) / geom.width;
         const dy = (ly - dh.startY) / geom.height;
@@ -452,9 +463,7 @@ export class ZoneEditor {
     // ------------------------------------------------------------------ private — save
 
     _saveZones() {
-        const activeZones = this._zones
-            .filter(z => !z._deleted)
-            .map(z => z.normRect);
+        const activeZones = this._zones.map(z => z.normRect);
 
         if (activeZones.length === 0) {
             this._log?.warn("ZoneEditor: cannot save with 0 zones");

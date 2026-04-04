@@ -21,14 +21,12 @@ const KB_DEFS = [
         handler: c => () => c.snapFocusedToPreset("halves", 1),
     },
     {
-        name: "snap-maximize",
-        // Win+Up: maximize if unsnapped; cycle to quadrant if snapped to a half
-        handler: c => () => c.snapFocusedUp(),
+        name: "snap-upper-quarter",
+        handler: c => () => c.snapFocusedToUpperQuarter(),
     },
     {
-        name: "snap-unsnap",
-        // Win+Down: restore if maximized; halves if in quadrant; unsnap otherwise
-        handler: c => () => c.snapFocusedDown(),
+        name: "snap-lower-quarter",
+        handler: c => () => c.snapFocusedToLowerQuarter(),
     },
     {
         name: "snap-top-left",
@@ -61,6 +59,22 @@ const KB_DEFS = [
     {
         name: "move-monitor-right",
         handler: c => () => c.moveFocusedToMonitor(Meta.DisplayDirection.RIGHT),
+    },
+    {
+        name: "move-swap-left",
+        handler: c => () => c.moveSwapFocused("left"),
+    },
+    {
+        name: "move-swap-right",
+        handler: c => () => c.moveSwapFocused("right"),
+    },
+    {
+        name: "move-swap-up",
+        handler: c => () => c.moveSwapFocused("up"),
+    },
+    {
+        name: "move-swap-down",
+        handler: c => () => c.moveSwapFocused("down"),
     },
     {
         name: "cycle-preset-next",

@@ -8,6 +8,7 @@
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Meta from "gi://Meta";
+import GLib from "gi://GLib";
 
 import { Settings } from "./src/settings.js";
 import { Logger } from "./src/logger.js";
@@ -51,7 +52,7 @@ class FluxCutController {
     }
 
     enable() {
-        // Phase 1 — core services
+        // Phase 1 — core services (lightweight, runs synchronously)
         this._settings = new Settings(this._ext);
         this._logger = new Logger(this._settings);
         setExtensionObject(this._ext);
@@ -59,14 +60,29 @@ class FluxCutController {
 
         this._logger.info("FluxCut enabling…");
 
-        // Phase 2 — zone logic
+        // Phase 2 — zone logic (lightweight)
         this._customZones = new CustomZoneStore(this._settings, this._logger);
         this._zoneManager = new ZoneManager(this._settings, this._customZones, this._logger);
 
-        // Phase 3 — monitor awareness
+        // Phase 3 — monitor awareness (lightweight)
         this._multiMonitor = new MultiMonitorManager(this._settings, this._zoneManager, this._logger);
         this._multiMonitor.enable();
 
+        // Phases 4-12 are deferred to avoid blocking shell startup.
+        // This prevents the "every program locks for a while on login" issue.
+        this._deferredInitId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._deferredInitId = null;
+            if (!this._settings) return GLib.SOURCE_REMOVE; // disabled before idle fired
+            this._enableDeferred();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    /**
+     * Deferred initialisation — runs after the shell has finished its own
+     * startup processing so we don't block window rendering.
+     */
+    _enableDeferred() {
         // Phase 4 — window state
         this._windowTracker = new WindowTracker(
             this._settings, this._zoneManager, this._multiMonitor, this._logger
@@ -91,7 +107,7 @@ class FluxCutController {
         );
         this._zoneHighlighter.enable();
 
-        // Phase 7 — snap overlay (Win+Z)
+        // Phase 7 — snap overlay (Super+Z)
         this._snapOverlay = new SnapOverlay(
             this._settings, this._zoneManager, this._customZones, this._multiMonitor,
             this._windowTracker, this._zoneHighlighter, this._animations, this._logger
@@ -138,7 +154,13 @@ class FluxCutController {
     }
 
     disable() {
-        this._logger.info("FluxCut disabling…");
+        this._logger?.info("FluxCut disabling…");
+
+        // Cancel deferred init if it hasn't run yet
+        if (this._deferredInitId) {
+            GLib.Source.remove(this._deferredInitId);
+            this._deferredInitId = null;
+        }
 
         if (this._sessionSignalId) {
             Main.sessionMode.disconnect(this._sessionSignalId);
@@ -178,8 +200,6 @@ class FluxCutController {
         this._animations = null;
         this._settings = null;
         this._logger = null;
-
-        this._logger?.info("FluxCut disabled");
     }
 
     _onSessionModeUpdated(sessionMode) {
@@ -217,21 +237,130 @@ class FluxCutController {
      */
     snapFocusedToPreset(presetId, zoneIndex) {
         const win = global.display.get_focus_window();
-        if (!win) return;
+        if (!win || !this._zoneManager) return;
 
         const monitorIndex = win.get_monitor();
         const rects = this._zoneManager.getZoneRects(presetId, monitorIndex, this._settings.windowGapSize);
         const rect  = rects[zoneIndex];
         if (!rect) return;
 
-        this._windowTracker.snapWindow(
-            win, presetId, zoneIndex, rect,
-            this._animations.duration > 0, this._animations
-        );
+        this._windowTracker.snapWindow(win, presetId, zoneIndex, rect);
     }
 
     /**
-     * Win+Up: context-aware maximize / snap-upward.
+     * Super+Up: Snap to upper quarter (context-aware).
+     *   Unsnapped            → top-left quarter
+     *   Left half            → top-left quarter
+     *   Right half           → top-right quarter
+     *   Bottom-left quarter  → top-left quarter
+     *   Bottom-right quarter → top-right quarter
+     *   Other snapped        → top-left quarter
+     */
+    snapFocusedToUpperQuarter() {
+        if (!this._windowTracker) return;
+        const win = global.display.get_focus_window();
+        if (!win) return;
+
+        const entry = this._windowTracker.getSnapEntry(win);
+        if (!entry) {
+            // Default to top-left quarter
+            return this.snapFocusedToPreset("quarters", 0);
+        }
+
+        if (entry.presetId === "halves"   && entry.zoneIndex === 0) return this.snapFocusedToPreset("quarters", 0);
+        if (entry.presetId === "halves"   && entry.zoneIndex === 1) return this.snapFocusedToPreset("quarters", 1);
+        if (entry.presetId === "quarters" && entry.zoneIndex === 2) return this.snapFocusedToPreset("quarters", 0);
+        if (entry.presetId === "quarters" && entry.zoneIndex === 3) return this.snapFocusedToPreset("quarters", 1);
+
+        // Default to top-left quarter
+        return this.snapFocusedToPreset("quarters", 0);
+    }
+
+    /**
+     * Super+Down: Snap to lower quarter (context-aware).
+     *   Unsnapped           → bottom-left quarter
+     *   Left half           → bottom-left quarter
+     *   Right half          → bottom-right quarter
+     *   Top-left quarter    → bottom-left quarter
+     *   Top-right quarter   → bottom-right quarter
+     *   Other snapped       → bottom-left quarter
+     */
+    snapFocusedToLowerQuarter() {
+        if (!this._windowTracker) return;
+        const win = global.display.get_focus_window();
+        if (!win) return;
+
+        const entry = this._windowTracker.getSnapEntry(win);
+        if (!entry) {
+            // Default to bottom-left quarter
+            return this.snapFocusedToPreset("quarters", 2);
+        }
+
+        if (entry.presetId === "halves"   && entry.zoneIndex === 0) return this.snapFocusedToPreset("quarters", 2);
+        if (entry.presetId === "halves"   && entry.zoneIndex === 1) return this.snapFocusedToPreset("quarters", 3);
+        if (entry.presetId === "quarters" && entry.zoneIndex === 0) return this.snapFocusedToPreset("quarters", 2);
+        if (entry.presetId === "quarters" && entry.zoneIndex === 1) return this.snapFocusedToPreset("quarters", 3);
+
+        // Default to bottom-left quarter
+        return this.snapFocusedToPreset("quarters", 2);
+    }
+
+    /**
+     * Ctrl+Super+Arrow: Move/swap focused window to adjacent zone.
+     * @param {string} direction - "left", "right", "up", "down"
+     */
+    moveSwapFocused(direction) {
+        const win = global.display.get_focus_window();
+        if (!win || !this._zoneManager) return;
+
+        const entry = this._windowTracker.getSnapEntry(win);
+        const monitorIndex = win.get_monitor();
+
+        // Map current position + direction to new preset+zone
+        let targetPreset, targetZone;
+
+        if (!entry) {
+            // Unsnapped window — snap to edge/quarter based on direction
+            if (direction === "left")       { targetPreset = "halves";   targetZone = 0; }
+            else if (direction === "right") { targetPreset = "halves";   targetZone = 1; }
+            else if (direction === "up")    { targetPreset = "quarters"; targetZone = 0; }
+            else if (direction === "down")  { targetPreset = "quarters"; targetZone = 2; }
+        } else if (entry.presetId === "halves") {
+            // In a half — move to quarters
+            if (entry.zoneIndex === 0) { // left half
+                if (direction === "right")      { targetPreset = "halves";   targetZone = 1; }
+                else if (direction === "up")    { targetPreset = "quarters"; targetZone = 0; }
+                else if (direction === "down")  { targetPreset = "quarters"; targetZone = 2; }
+            } else { // right half
+                if (direction === "left")       { targetPreset = "halves";   targetZone = 0; }
+                else if (direction === "up")    { targetPreset = "quarters"; targetZone = 1; }
+                else if (direction === "down")  { targetPreset = "quarters"; targetZone = 3; }
+            }
+        } else if (entry.presetId === "quarters") {
+            // In a quarter — move to adjacent quarter or half
+            const quarterMap = {
+                0: { left: null, right: 1, up: null, down: 2 },    // top-left
+                1: { left: 0, right: null, up: null, down: 3 },    // top-right
+                2: { left: null, right: 3, up: 0, down: null },    // bottom-left
+                3: { left: 2, right: null, up: 1, down: null },    // bottom-right
+            };
+            targetZone = quarterMap[entry.zoneIndex]?.[direction];
+            if (targetZone !== null && targetZone !== undefined) {
+                targetPreset = "quarters";
+            }
+        }
+
+        if (targetPreset && targetZone !== undefined) {
+            const rects = this._zoneManager.getZoneRects(targetPreset, monitorIndex, this._settings.windowGapSize);
+            const rect = rects[targetZone];
+            if (rect) {
+                this._windowTracker.snapWindow(win, targetPreset, targetZone, rect);
+            }
+        }
+    }
+
+    /**
+     * Super+Up: context-aware maximize / snap-upward.
      *   Unsnapped            → maximize
      *   Left half            → top-left quarter
      *   Right half           → top-right quarter
@@ -241,7 +370,7 @@ class FluxCutController {
      */
     snapFocusedUp() {
         const win = global.display.get_focus_window();
-        if (!win) return;
+        if (!win || !this._windowTracker) return;
 
         const entry = this._windowTracker.getSnapEntry(win);
         if (!entry) {
@@ -260,7 +389,7 @@ class FluxCutController {
     }
 
     /**
-     * Win+Down: context-aware restore / snap-downward.
+     * Super+Down: context-aware restore / snap-downward.
      *   Maximized           → restore
      *   Top-left quarter    → left half
      *   Top-right quarter   → right half
@@ -269,7 +398,7 @@ class FluxCutController {
      */
     snapFocusedDown() {
         const win = global.display.get_focus_window();
-        if (!win) return;
+        if (!win || !this._windowTracker) return;
 
         if (win.get_maximized() === Meta.MaximizeFlags.BOTH) {
             win.unmaximize(Meta.MaximizeFlags.BOTH);
@@ -287,7 +416,7 @@ class FluxCutController {
 
     toggleSnapOverlay() {
         const win = global.display.get_focus_window();
-        if (!win) return;
+        if (!win || !this._snapOverlay) return;
         if (this._snapOverlay._widget)
             this._snapOverlay.close();
         else
@@ -295,6 +424,7 @@ class FluxCutController {
     }
 
     openZoneEditor() {
+        if (!this._zoneEditor) return;
         const monitorIndex = global.display.get_focus_window()?.get_monitor()
             ?? global.display.get_current_monitor();
         this._zoneEditor.open(monitorIndex);
@@ -306,7 +436,7 @@ class FluxCutController {
      */
     moveFocusedToMonitor(direction) {
         const win = global.display.get_focus_window();
-        if (!win) return;
+        if (!win || !this._multiMonitor) return;
 
         this._multiMonitor.moveWindowToMonitor(win, direction, newMonitorIndex => {
             const entry = this._windowTracker.getSnapEntry(win);
@@ -316,24 +446,23 @@ class FluxCutController {
                 );
                 const newRect = rects[entry.zoneIndex];
                 if (newRect) {
-                    this._windowTracker.snapWindow(
-                        win, entry.presetId, entry.zoneIndex, newRect,
-                        this._animations.duration > 0, this._animations
-                    );
+                    this._windowTracker.snapWindow(win, entry.presetId, entry.zoneIndex, newRect);
                 }
             }
             // Re-snap the entire group on the new monitor
-            this._windowTracker.moveGroupToMonitor(win, newMonitorIndex, this._animations);
+            this._windowTracker.moveGroupToMonitor(win, newMonitorIndex);
         });
     }
 
     cyclePreset(direction) {
+        if (!this._multiMonitor) return;
         const monitorIndex = global.display.get_focus_window()?.get_monitor()
             ?? global.display.get_current_monitor();
         this._multiMonitor.cyclePreset(monitorIndex, direction);
     }
 
     restoreLastSnapGroup() {
+        if (!this._windowTracker) return;
         const groups = this._windowTracker.getActiveSnapGroups();
         if (groups.size === 0) return;
         const [key] = groups.keys();

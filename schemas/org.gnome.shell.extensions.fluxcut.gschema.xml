@@ -17,8 +17,8 @@
     <!-- Feature toggles -->
     <key name="snap-overlay-enabled" type="b">
       <default>true</default>
-      <summary>Enable Snap Layout Overlay (Win+Z)</summary>
-      <description>Show the Win+Z snap layout picker popup.</description>
+      <summary>Enable Snap Layout Overlay (Super+Z)</summary>
+      <description>Show the Super+Z snap layout picker popup.</description>
     </key>
 
     <key name="snap-assist-enabled" type="b">
@@ -75,17 +75,17 @@
     <key name="overlay-position" type="s">
       <default>'top-center'</default>
       <summary>Snap Overlay Position</summary>
-      <description>Where the Win+Z snap overlay appears: 'top-center' or 'top-right'.</description>
+      <description>Where the Super+Z snap overlay appears: 'top-center' or 'top-right'.</description>
     </key>
 
     <key name="zone-highlight-color" type="s">
-      <default>'rgba(0,120,212,0.25)'</default>
+      <default>'rgba(0,120,212,0.30)'</default>
       <summary>Zone Highlight Fill Color</summary>
       <description>RGBA color for inactive zone highlight overlays.</description>
     </key>
 
     <key name="zone-border-color" type="s">
-      <default>'rgba(0,120,212,0.9)'</default>
+      <default>'rgba(0,120,212,1.0)'</default>
       <summary>Zone Border Color</summary>
       <description>RGBA color for zone highlight borders and the active zone.</description>
     </key>
@@ -155,16 +155,16 @@
       <summary>Snap to Right Half</summary>
     </key>
 
-    <key name="snap-maximize" type="as">
+    <key name="snap-upper-quarter" type="as">
       <default><![CDATA[['<Super>Up']]]></default>
-      <summary>Snap Up / Maximize (context-aware)</summary>
-      <description>Maximize if unsnapped; top-left/right quarter if in a left/right half; maximize otherwise. Mirrors Win+Up behaviour.</description>
+      <summary>Snap to Upper Quarter (context-aware)</summary>
+      <description>Snap to upper-left/right quarter based on current position; defaults to upper-left if unsnapped.</description>
     </key>
 
-    <key name="snap-unsnap" type="as">
+    <key name="snap-lower-quarter" type="as">
       <default><![CDATA[['<Super>Down']]]></default>
-      <summary>Snap Down / Restore (context-aware)</summary>
-      <description>Restore if maximized; left/right half if in a top quarter; unsnap otherwise; minimize if floating. Mirrors Win+Down behaviour.</description>
+      <summary>Snap to Lower Quarter (context-aware)</summary>
+      <description>Snap to lower-left/right quarter based on current position; defaults to lower-left if unsnapped.</description>
     </key>
 
     <key name="snap-top-left" type="as">
@@ -195,6 +195,26 @@
     <key name="move-monitor-right" type="as">
       <default><![CDATA[['<Super><Shift>Right']]]></default>
       <summary>Move Window to Right Monitor</summary>
+    </key>
+
+    <key name="move-swap-left" type="as">
+      <default><![CDATA[['<Primary><Super>Left']]]></default>
+      <summary>Move/Swap Window to Left</summary>
+    </key>
+
+    <key name="move-swap-right" type="as">
+      <default><![CDATA[['<Primary><Super>Right']]]></default>
+      <summary>Move/Swap Window to Right</summary>
+    </key>
+
+    <key name="move-swap-up" type="as">
+      <default><![CDATA[['<Primary><Super>Up']]]></default>
+      <summary>Move/Swap Window to Upper Quarter</summary>
+    </key>
+
+    <key name="move-swap-down" type="as">
+      <default><![CDATA[['<Primary><Super>Down']]]></default>
+      <summary>Move/Swap Window to Lower Quarter</summary>
     </key>
 
     <key name="cycle-preset-next" type="as">

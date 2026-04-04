@@ -86,14 +86,11 @@ export class ZoneHighlighter {
 
         // Snap window and clear highlights
         if (this._dragDetector._draggedWindow) {
-            const animate = this._animations.duration > 0;
             this._windowTracker.snapWindow(
                 this._dragDetector._draggedWindow,
                 presetId,
                 zoneIndex,
-                rect,
-                animate,
-                this._animations
+                rect
             );
 
             // Scale snap feedback on window actor

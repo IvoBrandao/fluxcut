@@ -29,11 +29,32 @@ export class MaximizeHook {
         /** windowIds of recently-created windows (skip startup maximizes) */
         this._recentlyCreated = new Set();
 
+        /** True during the initial startup grace period (avoid intercepting
+         *  session-restored maximized windows that cause login blocking). */
+        this._startupGrace = true;
+
+        /** True while a grab-op (drag) is in progress or just ended.
+         *  Prevents intercepting a drag-to-top-edge maximize. */
+        this._grabActive = false;
+
         this._wmSignals = [];
         this._displaySignals = [];
+        this._startupTimerId = null;
+        this._grabCooldownId = null;
     }
 
     enable() {
+        // Startup grace: don't intercept any maximizes for the first 4 seconds
+        // after enable.  This avoids the login-time blocking where session-
+        // restored windows get their maximize intercepted, causing repeated
+        // overlay open/close cycles.
+        this._startupGrace = true;
+        this._startupTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 4000, () => {
+            this._startupGrace = false;
+            this._startupTimerId = null;
+            return GLib.SOURCE_REMOVE;
+        });
+
         this._wmSignals.push(
             global.window_manager.connect("size-changed", (_wm, actor) => {
                 this._onSizeChanged(actor);
@@ -44,9 +65,24 @@ export class MaximizeHook {
             global.display.connect("window-created", (_dpy, win) => {
                 const id = win.get_id();
                 this._recentlyCreated.add(id);
-                // Clear the new-window flag after 1.5 s
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
+                // Clear the new-window flag after 3 s (increased from 1.5 s)
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 3000, () => {
                     this._recentlyCreated.delete(id);
+                    return GLib.SOURCE_REMOVE;
+                });
+            }),
+            // Track grab operations so drag-to-top-edge maximize is not
+            // intercepted (the user intends to maximize, not open the overlay).
+            global.display.connect("grab-op-begin", () => {
+                this._grabActive = true;
+            }),
+            global.display.connect("grab-op-end", () => {
+                // Keep the flag for a short cooldown so the maximize triggered
+                // at the very end of the drag is also skipped.
+                if (this._grabCooldownId) GLib.Source.remove(this._grabCooldownId);
+                this._grabCooldownId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
+                    this._grabActive = false;
+                    this._grabCooldownId = null;
                     return GLib.SOURCE_REMOVE;
                 });
             })
@@ -56,6 +92,15 @@ export class MaximizeHook {
     }
 
     disable() {
+        if (this._startupTimerId) {
+            GLib.Source.remove(this._startupTimerId);
+            this._startupTimerId = null;
+        }
+        if (this._grabCooldownId) {
+            GLib.Source.remove(this._grabCooldownId);
+            this._grabCooldownId = null;
+        }
+
         for (const id of this._wmSignals)
             try { global.window_manager.disconnect(id); } catch (_) {}
         this._wmSignals = [];
@@ -66,6 +111,8 @@ export class MaximizeHook {
 
         this._bypassed.clear();
         this._recentlyCreated.clear();
+        this._startupGrace = true;
+        this._grabActive = false;
     }
 
     /**
@@ -97,6 +144,12 @@ export class MaximizeHook {
 
         // Skip app-startup maximizes
         if (this._recentlyCreated.has(win.get_id())) return;
+
+        // Skip during startup grace period (session-restored windows)
+        if (this._startupGrace) return;
+
+        // Skip during or right after a drag (drag-to-top-edge maximize)
+        if (this._grabActive) return;
 
         // Skip windows that forbid resize/move (fullscreen, docks, etc.)
         if (!win.allows_resize() && !win.allows_move()) return;

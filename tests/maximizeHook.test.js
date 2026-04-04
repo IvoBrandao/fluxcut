@@ -127,6 +127,9 @@ describe("MaximizeHook._onSizeChanged", () => {
         const hook = new MaximizeHook(makeSettings(), overlay, null);
         const win = makeWindow({ maximized: true });
 
+        // Must clear startup grace so the hook actually intercepts
+        hook._startupGrace = false;
+
         hook._onSizeChanged({ meta_window: win });
         // overlay.open is called inside idle_add → microtask
         await new Promise(r => setImmediate(r));
@@ -144,7 +147,8 @@ describe("MaximizeHook — enable/disable", () => {
         const hook = new MaximizeHook(makeSettings(), makeSnapOverlay(), null);
         hook.enable();
         assert.equal(hook._wmSignals.length, 1);
-        assert.equal(hook._displaySignals.length, 1);
+        // 3 display signals: window-created + grab-op-begin + grab-op-end
+        assert.equal(hook._displaySignals.length, 3);
 
         hook.disable();
         assert.equal(hook._wmSignals.length, 0);

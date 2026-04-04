@@ -140,12 +140,16 @@ export class ZoneManager {
     /**
      * Snap a window to a zone rect.
      *
+     * Always applies the geometry immediately via move_resize_frame.
+     * Mutter's compositor provides its own smooth window transitions,
+     * so we do not need custom actor animation (easeRect was unreliable
+     * because Mutter manages compositor actor allocation and overrides
+     * animated x/y/width/height properties).
+     *
      * @param {Meta.Window} metaWindow
      * @param {Meta.Rectangle} zoneRect
-     * @param {boolean} [animate=false]
-     * @param {Animations} [animations]
      */
-    assignWindowToZone(metaWindow, zoneRect, animate = false, animations = null) {
+    assignWindowToZone(metaWindow, zoneRect) {
         if (!metaWindow) return;
 
         // Must unmaximize before resizing (GNOME ignores move_resize on maximized windows)
@@ -154,22 +158,11 @@ export class ZoneManager {
             metaWindow.unmaximize(Meta.MaximizeFlags.BOTH);
         }
 
-        if (animate && animations) {
-            const fromRect = metaWindow.get_frame_rect();
-            animations.easeRect(metaWindow, fromRect, zoneRect, () => {
-                metaWindow.move_resize_frame(
-                    true,
-                    zoneRect.x, zoneRect.y,
-                    zoneRect.width, zoneRect.height
-                );
-            });
-        } else {
-            metaWindow.move_resize_frame(
-                true,
-                zoneRect.x, zoneRect.y,
-                zoneRect.width, zoneRect.height
-            );
-        }
+        metaWindow.move_resize_frame(
+            true,
+            zoneRect.x, zoneRect.y,
+            zoneRect.width, zoneRect.height
+        );
     }
 
     /**
@@ -216,23 +209,26 @@ export class ZoneManager {
 
     /**
      * Get the workarea for a monitor, merging panel/dock exclusions.
-     * Uses a dummy focused window if available, otherwise raw geometry.
+     *
+     * get_work_area_for_monitor() can be called on ANY Meta.Window to return
+     * the workarea for ANY monitor, so we just need a window reference — it
+     * doesn't have to be on the target monitor.
      *
      * @param {number} monitorIndex
      * @returns {Meta.Rectangle|null}
      */
     _getWorkarea(monitorIndex) {
         try {
-            // get_work_area_for_monitor is the most reliable, needs a Meta.Window reference
+            // Prefer the focused window (cheapest lookup)
             const focused = global.display.get_focus_window();
             if (focused) {
                 return focused.get_work_area_for_monitor(monitorIndex);
             }
-            // Fallback: iterate all windows to find one on this monitor
-            const wins = global.display.list_all_windows?.() ?? [];
-            for (const w of wins) {
-                if (w.get_monitor() === monitorIndex)
-                    return w.get_work_area_for_monitor(monitorIndex);
+            // Any managed window will do — use compositor actor list (fast C call)
+            const actors = global.get_window_actors?.() ?? [];
+            for (const actor of actors) {
+                const w = actor.meta_window;
+                if (w) return w.get_work_area_for_monitor(monitorIndex);
             }
             // Last resort: raw geometry (no panel subtraction)
             return global.display.get_monitor_geometry(monitorIndex);

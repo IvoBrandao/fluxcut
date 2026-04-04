@@ -34,10 +34,27 @@ export const MultiMonitorManager = GObject.registerClass(
         }
 
         enable() {
-            this._signalIds.push(
-                global.display.connect("monitors-changed", () => this._rebuild()),
-                global.display.connect("workareas-changed", () => this._rebuild())
-            );
+            // Try both possible signals for monitor changes
+            const display = global.display;
+            let monitorSignal = null;
+            if (typeof display.signal_names === "function" && display.signal_names().includes("monitors-changed")) {
+                monitorSignal = "monitors-changed";
+            } else if (typeof display.signal_names === "function" && display.signal_names().includes("monitors-config-changed")) {
+                monitorSignal = "monitors-config-changed";
+            } else {
+                // Fallback: try both, ignore errors
+                try {
+                    this._signalIds.push(display.connect("monitors-changed", () => this._rebuild()));
+                } catch {}
+                try {
+                    this._signalIds.push(display.connect("monitors-config-changed", () => this._rebuild()));
+                } catch {}
+                monitorSignal = null;
+            }
+            if (monitorSignal) {
+                this._signalIds.push(display.connect(monitorSignal, () => this._rebuild()));
+            }
+            this._signalIds.push(display.connect("workareas-changed", () => this._rebuild()));
             this._rebuild();
             this._loadPresetMap();
         }
@@ -170,7 +187,10 @@ export const MultiMonitorManager = GObject.registerClass(
                     isUltraWide: aspect >= 2.1,
                     isPortrait:  aspect < 0.8,
                     geometry: geom,
-                    workarea: this._zoneManager._getWorkarea(i) ?? geom,
+                    // Workarea is computed lazily by ZoneManager._getWorkarea()
+                    // when zone rects are actually needed. Computing it here
+                    // during init would iterate all windows on each monitor and
+                    // block extension startup.
                 });
             }
 
