@@ -1,0 +1,33 @@
+{
+  "name": "fluxcut",
+  "version": "1.0.0",
+  "description": "FluxCut — Window Snap Zones for GNOME Shell",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint extension.js prefs.js src/",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --import ./tests/mocks/gi.js tests/*.test.js",
+    "test:watch": "node --test --watch --import ./tests/mocks/gi.js tests/*.test.js",
+    "build": "make build",
+    "install-ext": "make install"
+  },
+  "devDependencies": {
+    "@girs/adw-1": "^1.3.3-4.0.0",
+    "@girs/clutter-14": "^14.0.0-4.0.0",
+    "@girs/gdk-4.0": "^4.0.0-4.0.0",
+    "@girs/gio-2.0": "^2.80.0-4.0.0",
+    "@girs/gjs": "^4.0.0",
+    "@girs/glib-2.0": "^2.80.0-4.0.0",
+    "@girs/gobject-2.0": "^2.80.0-4.0.0",
+    "@girs/gtk-4.0": "^4.14.0-4.0.0",
+    "@girs/meta-14": "^14.0.0-4.0.0",
+    "@girs/shell-14": "^14.0.0-4.0.0",
+    "@girs/st-14": "^14.0.0-4.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "~5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+
+  <!-- ======================================================
+       FluxCut main settings schema
+       ====================================================== -->
+  <schema id="org.gnome.shell.extensions.fluxcut"
+          path="/org/gnome/shell/extensions/fluxcut/">
+
+    <!-- Master toggle -->
+    <key name="fluxcut-enabled" type="b">
+      <default>true</default>
+      <summary>Enable FluxCut</summary>
+      <description>Master switch to enable or disable all FluxCut tiling features.</description>
+    </key>
+
+    <!-- Feature toggles -->
+    <key name="snap-overlay-enabled" type="b">
+      <default>true</default>
+      <summary>Enable Snap Layout Overlay (Win+Z)</summary>
+      <description>Show the Win+Z snap layout picker popup.</description>
+    </key>
+
+    <key name="snap-assist-enabled" type="b">
+      <default>true</default>
+      <summary>Enable Snap Assist</summary>
+      <description>After snapping a window, show thumbnail picker for remaining zones.</description>
+    </key>
+
+    <key name="drag-zone-highlight-enabled" type="b">
+      <default>true</default>
+      <summary>Enable Drag Zone Highlights</summary>
+      <description>Show zone highlight overlays when dragging a window near a snap zone.</description>
+    </key>
+
+    <key name="snap-groups-enabled" type="b">
+      <default>true</default>
+      <summary>Enable Snap Groups</summary>
+      <description>Track and restore groups of snapped windows.</description>
+    </key>
+
+    <!-- Window gaps -->
+    <key name="window-gap-size" type="u">
+      <default>4</default>
+      <range min="0" max="40"/>
+      <summary>Window Gap Size</summary>
+      <description>Gap in pixels between snapped windows and monitor edges.</description>
+    </key>
+
+    <!-- Drag behaviour -->
+    <key name="drag-edge-threshold" type="u">
+      <default>20</default>
+      <range min="5" max="100"/>
+      <summary>Zone Activation Threshold</summary>
+      <description>Pixel distance from a monitor edge that triggers zone highlighting during drag.</description>
+    </key>
+
+    <!-- Snap assist -->
+    <key name="snap-assist-timeout" type="u">
+      <default>8</default>
+      <range min="2" max="30"/>
+      <summary>Snap Assist Auto-Dismiss Timeout</summary>
+      <description>Seconds before the Snap Assist overlay automatically closes.</description>
+    </key>
+
+    <!-- Animations -->
+    <key name="animation-speed" type="u">
+      <default>2</default>
+      <range min="0" max="3"/>
+      <summary>Animation Speed</summary>
+      <description>0 = Off, 1 = Fast (100ms), 2 = Normal (200ms), 3 = Slow (400ms).</description>
+    </key>
+
+    <!-- Appearance -->
+    <key name="overlay-position" type="s">
+      <default>'top-center'</default>
+      <summary>Snap Overlay Position</summary>
+      <description>Where the Win+Z snap overlay appears: 'top-center' or 'top-right'.</description>
+    </key>
+
+    <key name="zone-highlight-color" type="s">
+      <default>'rgba(0,120,212,0.25)'</default>
+      <summary>Zone Highlight Fill Color</summary>
+      <description>RGBA color for inactive zone highlight overlays.</description>
+    </key>
+
+    <key name="zone-border-color" type="s">
+      <default>'rgba(0,120,212,0.9)'</default>
+      <summary>Zone Border Color</summary>
+      <description>RGBA color for zone highlight borders and the active zone.</description>
+    </key>
+
+    <!-- Custom zones (JSON-encoded) -->
+    <key name="custom-zone-sets" type="as">
+      <default>[]</default>
+      <summary>Custom Zone Sets</summary>
+      <description>JSON-encoded array of user-defined zone layouts.</description>
+    </key>
+
+    <!-- Per-monitor active preset (JSON-encoded) -->
+    <key name="monitor-presets" type="as">
+      <default>[]</default>
+      <summary>Monitor Presets</summary>
+      <description>JSON-encoded map of monitor index to active preset ID per workspace.</description>
+    </key>
+
+    <!-- Zone editor grid -->
+    <key name="zone-editor-grid-columns" type="u">
+      <default>12</default>
+      <range min="4" max="24"/>
+      <summary>Zone Editor Grid Columns</summary>
+      <description>Number of column divisions in the zone editor snap grid.</description>
+    </key>
+
+    <key name="zone-editor-grid-rows" type="u">
+      <default>8</default>
+      <range min="4" max="16"/>
+      <summary>Zone Editor Grid Rows</summary>
+      <description>Number of row divisions in the zone editor snap grid.</description>
+    </key>
+
+    <!-- Logging -->
+    <key name="log-level" type="u">
+      <default>0</default>
+      <range min="0" max="4"/>
+      <summary>Log Level</summary>
+      <description>0 = Off, 1 = Error, 2 = Warn, 3 = Info, 4 = Debug.</description>
+    </key>
+
+  </schema>
+
+  <!-- ======================================================
+       FluxCut keybindings schema
+       ====================================================== -->
+  <schema id="org.gnome.shell.extensions.fluxcut.keybindings"
+          path="/org/gnome/shell/extensions/fluxcut/keybindings/">
+
+    <key name="open-snap-overlay" type="as">
+      <default><![CDATA[['<Super>z']]]></default>
+      <summary>Open Snap Layout Overlay</summary>
+    </key>
+
+    <key name="open-zone-editor" type="as">
+      <default><![CDATA[['<Super>e']]]></default>
+      <summary>Open Zone Editor</summary>
+    </key>
+
+    <key name="snap-left-half" type="as">
+      <default><![CDATA[['<Super>Left']]]></default>
+      <summary>Snap to Left Half</summary>
+    </key>
+
+    <key name="snap-right-half" type="as">
+      <default><![CDATA[['<Super>Right']]]></default>
+      <summary>Snap to Right Half</summary>
+    </key>
+
+    <key name="snap-maximize" type="as">
+      <default><![CDATA[['<Super>Up']]]></default>
+      <summary>Snap Up / Maximize (context-aware)</summary>
+      <description>Maximize if unsnapped; top-left/right quarter if in a left/right half; maximize otherwise. Mirrors Win+Up behaviour.</description>
+    </key>
+
+    <key name="snap-unsnap" type="as">
+      <default><![CDATA[['<Super>Down']]]></default>
+      <summary>Snap Down / Restore (context-aware)</summary>
+      <description>Restore if maximized; left/right half if in a top quarter; unsnap otherwise; minimize if floating. Mirrors Win+Down behaviour.</description>
+    </key>
+
+    <key name="snap-top-left" type="as">
+      <default><![CDATA[['<Super>Home']]]></default>
+      <summary>Snap to Top-Left Quarter</summary>
+    </key>
+
+    <key name="snap-top-right" type="as">
+      <default><![CDATA[['<Super>Prior']]]></default>
+      <summary>Snap to Top-Right Quarter</summary>
+    </key>
+
+    <key name="snap-bottom-left" type="as">
+      <default><![CDATA[['<Super>End']]]></default>
+      <summary>Snap to Bottom-Left Quarter</summary>
+    </key>
+
+    <key name="snap-bottom-right" type="as">
+      <default><![CDATA[['<Super>Next']]]></default>
+      <summary>Snap to Bottom-Right Quarter</summary>
+    </key>
+
+    <key name="move-monitor-left" type="as">
+      <default><![CDATA[['<Super><Shift>Left']]]></default>
+      <summary>Move Window to Left Monitor</summary>
+    </key>
+
+    <key name="move-monitor-right" type="as">
+      <default><![CDATA[['<Super><Shift>Right']]]></default>
+      <summary>Move Window to Right Monitor</summary>
+    </key>
+
+    <key name="cycle-preset-next" type="as">
+      <default><![CDATA[['<Super>bracketright']]]></default>
+      <summary>Cycle to Next Preset</summary>
+    </key>
+
+    <key name="cycle-preset-prev" type="as">
+      <default><![CDATA[['<Super>bracketleft']]]></default>
+      <summary>Cycle to Previous Preset</summary>
+    </key>
+
+    <key name="restore-snap-group" type="as">
+      <default><![CDATA[['<Super><Shift>z']]]></default>
+      <summary>Restore Snap Group</summary>
+    </key>
+
+    <key name="snap-to-zone-1" type="as">
+      <default>[]</default>
+      <summary>Snap to Zone 1</summary>
+    </key>
+
+    <key name="snap-to-zone-2" type="as">
+      <default>[]</default>
+      <summary>Snap to Zone 2</summary>
+    </key>
+
+    <key name="snap-to-zone-3" type="as">
+      <default>[]</default>
+      <summary>Snap to Zone 3</summary>
+    </key>
+
+    <key name="snap-to-zone-4" type="as">
+      <default>[]</default>
+      <summary>Snap to Zone 4</summary>
+    </key>
+
+    <key name="snap-to-zone-5" type="as">
+      <default>[]</default>
+      <summary>Snap to Zone 5</summary>
+    </key>
+
+    <key name="snap-to-zone-6" type="as">
+      <default>[]</default>
+      <summary>Snap to Zone 6</summary>
+    </key>
+
+  </schema>
+
+</schemalist>

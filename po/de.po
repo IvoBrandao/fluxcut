@@ -1,0 +1,72 @@
+# FluxCut German Translation
+# Copyright (C) 2026 FluxCut Contributors
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: FluxCut 1\n"
+"PO-Revision-Date: 2026-04-04 00:00+0000\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "FluxCut"
+msgstr "FluxCut"
+
+msgid "Window snap zones for GNOME"
+msgstr "Windows-11-artige Einrastzonen für GNOME"
+
+msgid "Enable FluxCut"
+msgstr "FluxCut aktivieren"
+
+msgid "Snap Zones"
+msgstr "Einrastzonen"
+
+msgid "Drag Zone Highlights"
+msgstr "Zonenhervorhebung beim Ziehen"
+
+msgid "Snap Overlay"
+msgstr "Einrast-Overlay"
+
+msgid "Snap Assist"
+msgstr "Einrast-Assistent"
+
+msgid "Snap Groups"
+msgstr "Einrast-Gruppen"
+
+msgid "Edit Zones…"
+msgstr "Zonen bearbeiten…"
+
+msgid "Settings…"
+msgstr "Einstellungen…"
+
+msgid "Save"
+msgstr "Speichern"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+msgid "Reset to Default"
+msgstr "Zurücksetzen"
+
+msgid "Add New Layout"
+msgstr "Neues Layout hinzufügen"
+
+msgid "Window Gap Size"
+msgstr "Fensterabstandsgröße"
+
+msgid "Animation Speed"
+msgstr "Animationsgeschwindigkeit"
+
+msgid "Off"
+msgstr "Aus"
+
+msgid "Fast"
+msgstr "Schnell"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Slow"
+msgstr "Langsam"

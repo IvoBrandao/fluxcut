@@ -1,0 +1,72 @@
+# FluxCut Italian Translation
+# Copyright (C) 2026 FluxCut Contributors
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: FluxCut 1\n"
+"PO-Revision-Date: 2026-04-04 00:00+0000\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "FluxCut"
+msgstr "FluxCut"
+
+msgid "Window snap zones for GNOME"
+msgstr "Zone di aggancio per GNOME"
+
+msgid "Enable FluxCut"
+msgstr "Abilita FluxCut"
+
+msgid "Snap Zones"
+msgstr "Zone di aggancio"
+
+msgid "Drag Zone Highlights"
+msgstr "Evidenziazione zone durante il trascinamento"
+
+msgid "Snap Overlay"
+msgstr "Overlay di aggancio"
+
+msgid "Snap Assist"
+msgstr "Assistente aggancio"
+
+msgid "Snap Groups"
+msgstr "Gruppi di aggancio"
+
+msgid "Edit Zones…"
+msgstr "Modifica zone…"
+
+msgid "Settings…"
+msgstr "Impostazioni…"
+
+msgid "Save"
+msgstr "Salva"
+
+msgid "Cancel"
+msgstr "Annulla"
+
+msgid "Reset to Default"
+msgstr "Ripristina predefinito"
+
+msgid "Add New Layout"
+msgstr "Aggiungi nuovo layout"
+
+msgid "Window Gap Size"
+msgstr "Dimensione spazio tra finestre"
+
+msgid "Animation Speed"
+msgstr "Velocità animazione"
+
+msgid "Off"
+msgstr "Disattivato"
+
+msgid "Fast"
+msgstr "Veloce"
+
+msgid "Normal"
+msgstr "Normale"
+
+msgid "Slow"
+msgstr "Lento"

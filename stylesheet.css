@@ -1,0 +1,228 @@
+/**
+ * FluxCut — stylesheet.css
+ * All visual styles for St-based overlays.
+ * Colors are also set programmatically from GSettings but CSS provides
+ * structural sizing, border-radius, and default fallbacks.
+ */
+
+/* ============================================================
+   Zone Highlights (zoneHighlight.js)
+   ============================================================ */
+
+.fluxcut-zone-inactive {
+    background-color: rgba(0, 120, 212, 0.15);
+    border: 2px solid rgba(0, 120, 212, 0.5);
+    border-radius: 6px;
+}
+
+.fluxcut-zone-active {
+    background-color: rgba(0, 120, 212, 0.40);
+    border: 2px solid rgba(0, 120, 212, 0.95);
+    border-radius: 6px;
+}
+
+/* ============================================================
+   Snap Overlay — Win+Z popup (snapOverlay.js)
+   ============================================================ */
+
+.fluxcut-snap-overlay {
+    background-color: rgba(28, 28, 28, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 12px 16px;
+    spacing: 8px;
+}
+
+.fluxcut-preset-row {
+    spacing: 8px;
+}
+
+.fluxcut-preset-button {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 8px;
+    padding: 8px;
+    min-width: 72px;
+    min-height: 48px;
+}
+
+.fluxcut-preset-button:hover {
+    background-color: rgba(0, 120, 212, 0.35);
+    border-color: rgba(0, 120, 212, 0.80);
+}
+
+.fluxcut-preset-button:focus {
+    background-color: rgba(0, 120, 212, 0.50);
+    border-color: rgba(0, 120, 212, 1.0);
+}
+
+.fluxcut-preset-label {
+    color: rgba(255, 255, 255, 0.70);
+    font-size: 10px;
+    text-align: center;
+}
+
+/* Mini zone-block diagrams inside each preset button */
+.fluxcut-zone-block {
+    background-color: rgba(180, 180, 180, 0.30);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+    border-radius: 2px;
+    margin: 1px;
+}
+
+.fluxcut-zone-block-primary {
+    background-color: rgba(0, 120, 212, 0.55);
+    border-color: rgba(0, 120, 212, 0.90);
+}
+
+/* ============================================================
+   Snap Assist (snapAssist.js)
+   ============================================================ */
+
+.fluxcut-snap-assist {
+    background-color: rgba(28, 28, 28, 0.90);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 10px;
+    spacing: 6px;
+    min-width: 140px;
+}
+
+.fluxcut-snap-assist-title {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 10px;
+    text-align: center;
+}
+
+.fluxcut-snap-assist-thumb {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    padding: 4px;
+}
+
+.fluxcut-snap-assist-thumb:hover {
+    background-color: rgba(0, 120, 212, 0.35);
+    border-color: rgba(0, 120, 212, 0.80);
+}
+
+.fluxcut-snap-assist-label {
+    color: rgba(255, 255, 255, 0.80);
+    font-size: 10px;
+}
+
+.fluxcut-snap-assist-overflow {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 10px;
+    text-align: center;
+}
+
+/* ============================================================
+   Zone Editor (zoneEditor.js)
+   ============================================================ */
+
+.fluxcut-editor-backdrop {
+    background-color: rgba(0, 0, 0, 0.62);
+}
+
+.fluxcut-editor-zone {
+    background-color: rgba(0, 120, 212, 0.12);
+    border: 2px dashed rgba(0, 120, 212, 0.65);
+    border-radius: 4px;
+}
+
+.fluxcut-editor-zone:hover {
+    background-color: rgba(0, 120, 212, 0.22);
+    border-color: rgba(0, 120, 212, 0.90);
+}
+
+.fluxcut-editor-zone-selected {
+    background-color: rgba(0, 120, 212, 0.28);
+    border: 2px solid rgba(0, 120, 212, 1.0);
+}
+
+.fluxcut-editor-handle {
+    background-color: rgba(0, 120, 212, 1.0);
+    border-radius: 3px;
+    width: 10px;
+    height: 10px;
+}
+
+.fluxcut-editor-rubberband {
+    background-color: rgba(0, 120, 212, 0.18);
+    border: 2px dashed rgba(0, 120, 212, 0.80);
+    border-radius: 3px;
+}
+
+.fluxcut-editor-toolbar {
+    background-color: rgba(22, 22, 22, 0.96);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 10px 16px;
+    spacing: 10px;
+}
+
+.fluxcut-editor-btn {
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 6px 14px;
+    color: rgba(255, 255, 255, 0.90);
+}
+
+.fluxcut-editor-btn:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.fluxcut-editor-btn-primary {
+    background-color: rgba(0, 120, 212, 0.80);
+    border-color: rgba(0, 120, 212, 1.0);
+}
+
+.fluxcut-editor-btn-primary:hover {
+    background-color: rgba(0, 120, 212, 1.0);
+}
+
+.fluxcut-editor-status {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 11px;
+}
+
+/* ============================================================
+   Snap Groups Panel Button & Popup (snapGroups.js)
+   ============================================================ */
+
+.fluxcut-groups-button {
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.fluxcut-groups-popup {
+    background-color: rgba(28, 28, 28, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 8px;
+    min-width: 200px;
+    spacing: 4px;
+}
+
+.fluxcut-group-row {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 6px 10px;
+    spacing: 8px;
+}
+
+.fluxcut-group-row:hover {
+    background-color: rgba(0, 120, 212, 0.30);
+    border-color: rgba(0, 120, 212, 0.60);
+}
+
+.fluxcut-group-icon {
+    /* intentionally empty — app icons sized externally */
+}
+
+.fluxcut-group-label {
+    color: rgba(255, 255, 255, 0.80);
+    font-size: 11px;
+}
