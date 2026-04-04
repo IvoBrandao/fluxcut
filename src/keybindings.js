@@ -14,11 +14,11 @@ import Shell from "gi://Shell";
 const KB_DEFS = [
     {
         name: "snap-left-half",
-        handler: c => () => c.snapFocusedToPreset("halves", 0),
+        handler: c => () => c.snapFocusedLeft(),
     },
     {
         name: "snap-right-half",
-        handler: c => () => c.snapFocusedToPreset("halves", 1),
+        handler: c => () => c.snapFocusedRight(),
     },
     {
         name: "snap-upper-quarter",
@@ -75,6 +75,14 @@ const KB_DEFS = [
     {
         name: "move-swap-down",
         handler: c => () => c.moveSwapFocused("down"),
+    },
+    {
+        name: "focus-cycle-tiled",
+        handler: c => () => c.focusCycleTiled(),
+    },
+    {
+        name: "auto-tile-grid",
+        handler: c => () => c.autoTileToGrid(),
     },
     {
         name: "cycle-preset-next",

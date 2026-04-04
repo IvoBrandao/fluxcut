@@ -51,6 +51,7 @@ export class ZoneEditor {
         this._draggingHandle = null; // { zoneIdx, edge, startX, startY, origRect }
 
         this._captureId = null;
+        this._grab = null;
     }
 
     // ------------------------------------------------------------------ public
@@ -114,10 +115,10 @@ export class ZoneEditor {
             }
         }
 
-        // Use captured-event on the backdrop to intercept all pointer events.
-        // The backdrop has a visible background so Clutter delivers events to it
-        // reliably (unlike a transparent canvas widget).
-        this._captureId = this._backdrop.connect("captured-event", (_a, event) => {
+        // Event handling: captured-event was removed from ClutterActor in
+        // GNOME 47+.  Try it first (GNOME 45-46), then fall back to a Clutter
+        // grab + the regular "event" signal (GNOME 47-49).
+        const handler = (_a, event) => {
             const type = event.type();
 
             if (type === Clutter.EventType.BUTTON_PRESS) {
@@ -134,13 +135,26 @@ export class ZoneEditor {
                 }
             }
             return Clutter.EVENT_PROPAGATE;
-        });
+        };
+
+        try {
+            this._captureId = this._backdrop.connect("captured-event", handler);
+        } catch (_) {
+            // GNOME 47+: captured-event removed. Use grab + event instead.
+            this._grab = this._backdrop.grab();
+            this._captureId = this._backdrop.connect("event", handler);
+        }
 
         this._backdrop.grab_key_focus();
     }
 
     close() {
         if (!this._backdrop) return;
+
+        if (this._grab) {
+            this._grab.dismiss();
+            this._grab = null;
+        }
 
         if (this._captureId) {
             this._backdrop.disconnect(this._captureId);
@@ -237,19 +251,8 @@ export class ZoneEditor {
         for (const h of handles)
             this._canvas.add_child(h);
 
-        // Use object reference (not array index) so deletion stays correct
-        // even after other zones are removed.
         const zone = { normRect, actor, handles };
         this._zones.push(zone);
-
-        // Middle-click to delete
-        actor.connect("button-press-event", (_a, event) => {
-            if (event.get_button() === 2) { // middle button
-                this._deleteZone(zone);
-                return true;
-            }
-            return false;
-        });
 
         this._updateStatus();
         return this._zones.length - 1;
@@ -324,8 +327,7 @@ export class ZoneEditor {
     // ------------------------------------------------------------------ private — canvas input
 
     _onPress(event) {
-        if (event.get_button() !== 1) // primary button
-            return Clutter.EVENT_PROPAGATE;
+        const button = event.get_button();
 
         const [cx, cy] = event.get_coords();
         const [ox, oy] = this._backdrop.get_transformed_position();
@@ -335,18 +337,35 @@ export class ZoneEditor {
         // Ignore clicks on the toolbar area
         const geom = global.display.get_monitor_geometry(this._monitorIndex);
         const toolbarH = 56;
+
         if (ly > geom.height - toolbarH)
             return Clutter.EVENT_PROPAGATE;
 
-        // Check if pressing a handle
-        const source = event.get_source();
-        if (source._fluxcutEdge) {
-            const targetActor = source._fluxcutZoneActor;
+        // Middle-click to delete a zone (coordinate-based for GNOME 47+ compat)
+        if (button === 2) {
+            const zone = this._findZoneAt(lx, ly, geom);
+            if (zone) {
+                this._deleteZone(zone);
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        }
+
+        if (button !== 1) // primary button
+            return Clutter.EVENT_PROPAGATE;
+        if (ly > geom.height - toolbarH)
+            return Clutter.EVENT_PROPAGATE;
+
+        // Check if pressing a handle (coordinate hit-test; event.get_source()
+        // was removed in GNOME 47+)
+        const handle = this._findHandleAt(lx, ly);
+        if (handle) {
+            const targetActor = handle._fluxcutZoneActor;
             const zone = this._zones.find(z => z.actor === targetActor);
             if (zone) {
                 this._draggingHandle = {
                     zone,
-                    edge: source._fluxcutEdge,
+                    edge: handle._fluxcutEdge,
                     startX: lx,
                     startY: ly,
                     origRect: { ...zone.normRect },
@@ -477,6 +496,40 @@ export class ZoneEditor {
     }
 
     // ------------------------------------------------------------------ private — grid snap
+
+    /**
+     * Find the handle actor at the given local coordinates (backdrop-relative).
+     * Replaces event.get_source() which was removed in GNOME 47+.
+     */
+    _findHandleAt(lx, ly) {
+        for (const zone of this._zones) {
+            for (const h of zone.handles) {
+                const hx = h.x;
+                const hy = h.y;
+                const hw = h.width || HANDLE_SIZE;
+                const hh = h.height || HANDLE_SIZE;
+                if (lx >= hx && lx <= hx + hw && ly >= hy && ly <= hy + hh)
+                    return h;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Find the zone entry at the given local coordinates (backdrop-relative).
+     */
+    _findZoneAt(lx, ly, geom) {
+        for (const zone of this._zones) {
+            const nr = zone.normRect;
+            const zx = nr.x * geom.width;
+            const zy = nr.y * geom.height;
+            const zw = nr.w * geom.width;
+            const zh = nr.h * geom.height;
+            if (lx >= zx && lx <= zx + zw && ly >= zy && ly <= zy + zh)
+                return zone;
+        }
+        return null;
+    }
 
     _snapToGrid(normRect) {
         const cols = this._settings.zoneEditorGridColumns;

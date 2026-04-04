@@ -32,6 +32,8 @@ function makeController() {
     const calls = [];
     return {
         snapFocusedToPreset: (preset, zone) => calls.push(["snapFocusedToPreset", preset, zone]),
+        snapFocusedLeft: () => calls.push(["snapFocusedLeft"]),
+        snapFocusedRight: () => calls.push(["snapFocusedRight"]),
         snapFocusedToUpperQuarter: () => calls.push(["snapFocusedToUpperQuarter"]),
         snapFocusedToLowerQuarter: () => calls.push(["snapFocusedToLowerQuarter"]),
         toggleSnapOverlay: () => calls.push(["toggleSnapOverlay"]),
@@ -40,6 +42,8 @@ function makeController() {
         moveSwapFocused: (dir) => calls.push(["moveSwapFocused", dir]),
         cyclePreset: (dir) => calls.push(["cyclePreset", dir]),
         restoreLastSnapGroup: () => calls.push(["restoreLastSnapGroup"]),
+        focusCycleTiled: () => calls.push(["focusCycleTiled"]),
+        autoTileToGrid: () => calls.push(["autoTileToGrid"]),
         _calls: calls,
     };
 }
@@ -63,12 +67,12 @@ describe("Keybindings", () => {
         });
     });
 
-    it("registers all 19 keybindings on enable", () => {
+    it("registers all 21 keybindings on enable", () => {
         const kb = new Keybindings(makeSettings(), makeController(), makeLogger());
         kb.enable();
 
-        assert.equal(addedBindings.length, 19);
-        assert.equal(kb._registered.length, 19);
+        assert.equal(addedBindings.length, 21);
+        assert.equal(kb._registered.length, 21);
     });
 
     it("registers expected binding names", () => {
@@ -95,6 +99,8 @@ describe("Keybindings", () => {
         assert.ok(names.includes("cycle-preset-next"));
         assert.ok(names.includes("cycle-preset-prev"));
         assert.ok(names.includes("restore-snap-group"));
+        assert.ok(names.includes("focus-cycle-tiled"));
+        assert.ok(names.includes("auto-tile-grid"));
     });
 
     it("all handlers are callable functions", () => {
@@ -106,24 +112,24 @@ describe("Keybindings", () => {
         }
     });
 
-    it("snap-left-half handler calls controller.snapFocusedToPreset('halves', 0)", () => {
+    it("snap-left-half handler calls controller.snapFocusedLeft()", () => {
         const ctrl = makeController();
         const kb = new Keybindings(makeSettings(), ctrl, makeLogger());
         kb.enable();
 
         const binding = addedBindings.find(b => b.name === "snap-left-half");
         binding.handler();
-        assert.deepEqual(ctrl._calls[0], ["snapFocusedToPreset", "halves", 0]);
+        assert.deepEqual(ctrl._calls[0], ["snapFocusedLeft"]);
     });
 
-    it("snap-right-half handler calls controller.snapFocusedToPreset('halves', 1)", () => {
+    it("snap-right-half handler calls controller.snapFocusedRight()", () => {
         const ctrl = makeController();
         const kb = new Keybindings(makeSettings(), ctrl, makeLogger());
         kb.enable();
 
         const binding = addedBindings.find(b => b.name === "snap-right-half");
         binding.handler();
-        assert.deepEqual(ctrl._calls[0], ["snapFocusedToPreset", "halves", 1]);
+        assert.deepEqual(ctrl._calls[0], ["snapFocusedRight"]);
     });
 
     it("snap-top-left handler calls controller.snapFocusedToPreset('quarters', 0)", () => {
@@ -201,7 +207,7 @@ describe("Keybindings", () => {
         kb.enable();
         kb.disable();
 
-        assert.equal(removedBindings.length, 19);
+        assert.equal(removedBindings.length, 21);
         assert.equal(kb._registered.length, 0);
     });
 
@@ -210,7 +216,7 @@ describe("Keybindings", () => {
         kb.enable();
         kb.disable();
         assert.doesNotThrow(() => kb.disable());
-        assert.equal(removedBindings.length, 19); // only first disable removes
+        assert.equal(removedBindings.length, 21); // only first disable removes
     });
 
     it("survives addKeybinding failure for individual bindings", () => {
@@ -231,7 +237,7 @@ describe("Keybindings", () => {
         kb.enable();
 
         assert.equal(failCount, 1);
-        assert.equal(kb._registered.length, 18); // one failed
+        assert.equal(kb._registered.length, 20); // one failed
         assert.ok(logger._logs.some(l => l[0] === "warn" && l[1].includes("snap-top-left")));
     });
 

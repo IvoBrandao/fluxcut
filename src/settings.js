@@ -42,6 +42,9 @@ export class Settings {
 
     get logLevel() { return this._settings.get_uint("log-level"); }
 
+    get roundedCornersEnabled() { return this._settings.get_boolean("rounded-corners-enabled"); }
+    get roundedCornersRadius() { return this._settings.get_uint("rounded-corners-radius"); }
+
     // ------------------------------------------------------------------ bind helpers
 
     /**

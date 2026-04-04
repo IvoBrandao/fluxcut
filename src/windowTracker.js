@@ -131,6 +131,24 @@ export class WindowTracker {
     }
 
     /**
+     * Find the window currently snapped to a specific zone on a monitor.
+     * Returns the Meta.Window or null.
+     */
+    getWindowAtZone(presetId, zoneIndex, monitorIndex) {
+        const wsIndex = global.workspace_manager.get_active_workspace_index();
+        for (const [windowId, entry] of this._snapped) {
+            if (entry.presetId === presetId &&
+                entry.zoneIndex === zoneIndex &&
+                entry.monitorIndex === monitorIndex &&
+                entry.workspaceIndex === wsIndex) {
+                const win = this._findWindowById(windowId);
+                if (win) return win;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Get all windows snapped to the same preset on the same monitor+workspace.
      *
      * @returns {{ metaWindow: Meta.Window, entry: object }[]}

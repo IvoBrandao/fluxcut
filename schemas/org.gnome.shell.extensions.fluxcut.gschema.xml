@@ -127,13 +127,129 @@
       <description>0 = Off, 1 = Error, 2 = Warn, 3 = Info, 4 = Debug.</description>
     </key>
 
+    <!-- Rounded corners -->
+    <key name="rounded-corners-enabled" type="b">
+      <default>false</default>
+      <summary>Enable Rounded Window Corners</summary>
+      <description>Apply rounded corners to all windows.</description>
+    </key>
+
+    <key name="rounded-corners-radius" type="u">
+      <default>12</default>
+      <range min="1" max="30"/>
+      <summary>Corner Radius (px)</summary>
+      <description>The radius in pixels for rounded window corners.</description>
+    </key>
+
   </schema>
 
   <!-- ======================================================
-       FluxCut keybindings schema
+       FluxCut keybindings schema — i3-inspired defaults
        ====================================================== -->
   <schema id="org.gnome.shell.extensions.fluxcut.keybindings"
           path="/org/gnome/shell/extensions/fluxcut/keybindings/">
+
+    <!-- ── Window Tiling (Super + direction) ────────────────────────── -->
+
+    <key name="snap-left-half" type="as">
+      <default><![CDATA[['<Super>Left']]]></default>
+      <summary>Tile Left / Navigate Left</summary>
+      <description>Snap to left half, or move quarter-tiled window leftward.</description>
+    </key>
+
+    <key name="snap-right-half" type="as">
+      <default><![CDATA[['<Super>Right']]]></default>
+      <summary>Tile Right / Navigate Right</summary>
+      <description>Snap to right half, or move quarter-tiled window rightward.</description>
+    </key>
+
+    <key name="snap-upper-quarter" type="as">
+      <default><![CDATA[['<Super>Up']]]></default>
+      <summary>Tile Up / Navigate Up</summary>
+      <description>Snap to upper quarter, or move quarter-tiled window upward.</description>
+    </key>
+
+    <key name="snap-lower-quarter" type="as">
+      <default><![CDATA[['<Super>Down']]]></default>
+      <summary>Tile Down / Navigate Down</summary>
+      <description>Snap to lower quarter, or move quarter-tiled window downward.</description>
+    </key>
+
+    <!-- ── Direct Quarter Tiling (Super + u/i/j/k) ─────────────────── -->
+
+    <key name="snap-top-left" type="as">
+      <default><![CDATA[['<Super>u']]]></default>
+      <summary>Snap to Top-Left Quarter</summary>
+    </key>
+
+    <key name="snap-top-right" type="as">
+      <default><![CDATA[['<Super>i']]]></default>
+      <summary>Snap to Top-Right Quarter</summary>
+    </key>
+
+    <key name="snap-bottom-left" type="as">
+      <default><![CDATA[['<Super>j']]]></default>
+      <summary>Snap to Bottom-Left Quarter</summary>
+    </key>
+
+    <key name="snap-bottom-right" type="as">
+      <default><![CDATA[['<Super>k']]]></default>
+      <summary>Snap to Bottom-Right Quarter</summary>
+    </key>
+
+    <!-- ── Window Movement / Swap (Super+Shift + direction) ─────────── -->
+
+    <key name="move-swap-left" type="as">
+      <default><![CDATA[['<Super><Shift>Left']]]></default>
+      <summary>Move/Swap Window Left</summary>
+      <description>Move focused window one zone left; swap with occupant if any.</description>
+    </key>
+
+    <key name="move-swap-right" type="as">
+      <default><![CDATA[['<Super><Shift>Right']]]></default>
+      <summary>Move/Swap Window Right</summary>
+      <description>Move focused window one zone right; swap with occupant if any.</description>
+    </key>
+
+    <key name="move-swap-up" type="as">
+      <default><![CDATA[['<Super><Shift>Up']]]></default>
+      <summary>Move/Swap Window Up</summary>
+      <description>Move focused window one zone up; swap with occupant if any.</description>
+    </key>
+
+    <key name="move-swap-down" type="as">
+      <default><![CDATA[['<Super><Shift>Down']]]></default>
+      <summary>Move/Swap Window Down</summary>
+      <description>Move focused window one zone down; swap with occupant if any.</description>
+    </key>
+
+    <!-- ── Focus & Auto-Tile ────────────────────────────────────────── -->
+
+    <key name="focus-cycle-tiled" type="as">
+      <default><![CDATA[['<Super>Tab']]]></default>
+      <summary>Cycle Focus Between Tiled Windows</summary>
+      <description>Move keyboard focus to the next snapped window in the current layout.</description>
+    </key>
+
+    <key name="auto-tile-grid" type="as">
+      <default><![CDATA[['<Super>t']]]></default>
+      <summary>Auto-Tile to Active Grid</summary>
+      <description>Automatically tile all visible windows into the active zone layout.</description>
+    </key>
+
+    <!-- ── Monitor Movement (Super+Ctrl + direction) ────────────────── -->
+
+    <key name="move-monitor-left" type="as">
+      <default><![CDATA[['<Super><Primary>Left']]]></default>
+      <summary>Move Window to Left Monitor</summary>
+    </key>
+
+    <key name="move-monitor-right" type="as">
+      <default><![CDATA[['<Super><Primary>Right']]]></default>
+      <summary>Move Window to Right Monitor</summary>
+    </key>
+
+    <!-- ── Layout & Overlay ─────────────────────────────────────────── -->
 
     <key name="open-snap-overlay" type="as">
       <default><![CDATA[['<Super>z']]]></default>
@@ -143,78 +259,6 @@
     <key name="open-zone-editor" type="as">
       <default><![CDATA[['<Super>e']]]></default>
       <summary>Open Zone Editor</summary>
-    </key>
-
-    <key name="snap-left-half" type="as">
-      <default><![CDATA[['<Super>Left']]]></default>
-      <summary>Snap to Left Half</summary>
-    </key>
-
-    <key name="snap-right-half" type="as">
-      <default><![CDATA[['<Super>Right']]]></default>
-      <summary>Snap to Right Half</summary>
-    </key>
-
-    <key name="snap-upper-quarter" type="as">
-      <default><![CDATA[['<Super>Up']]]></default>
-      <summary>Snap to Upper Quarter (context-aware)</summary>
-      <description>Snap to upper-left/right quarter based on current position; defaults to upper-left if unsnapped.</description>
-    </key>
-
-    <key name="snap-lower-quarter" type="as">
-      <default><![CDATA[['<Super>Down']]]></default>
-      <summary>Snap to Lower Quarter (context-aware)</summary>
-      <description>Snap to lower-left/right quarter based on current position; defaults to lower-left if unsnapped.</description>
-    </key>
-
-    <key name="snap-top-left" type="as">
-      <default><![CDATA[['<Super>Home']]]></default>
-      <summary>Snap to Top-Left Quarter</summary>
-    </key>
-
-    <key name="snap-top-right" type="as">
-      <default><![CDATA[['<Super>Prior']]]></default>
-      <summary>Snap to Top-Right Quarter</summary>
-    </key>
-
-    <key name="snap-bottom-left" type="as">
-      <default><![CDATA[['<Super>End']]]></default>
-      <summary>Snap to Bottom-Left Quarter</summary>
-    </key>
-
-    <key name="snap-bottom-right" type="as">
-      <default><![CDATA[['<Super>Next']]]></default>
-      <summary>Snap to Bottom-Right Quarter</summary>
-    </key>
-
-    <key name="move-monitor-left" type="as">
-      <default><![CDATA[['<Super><Shift>Left']]]></default>
-      <summary>Move Window to Left Monitor</summary>
-    </key>
-
-    <key name="move-monitor-right" type="as">
-      <default><![CDATA[['<Super><Shift>Right']]]></default>
-      <summary>Move Window to Right Monitor</summary>
-    </key>
-
-    <key name="move-swap-left" type="as">
-      <default><![CDATA[['<Primary><Super>Left']]]></default>
-      <summary>Move/Swap Window to Left</summary>
-    </key>
-
-    <key name="move-swap-right" type="as">
-      <default><![CDATA[['<Primary><Super>Right']]]></default>
-      <summary>Move/Swap Window to Right</summary>
-    </key>
-
-    <key name="move-swap-up" type="as">
-      <default><![CDATA[['<Primary><Super>Up']]]></default>
-      <summary>Move/Swap Window to Upper Quarter</summary>
-    </key>
-
-    <key name="move-swap-down" type="as">
-      <default><![CDATA[['<Primary><Super>Down']]]></default>
-      <summary>Move/Swap Window to Lower Quarter</summary>
     </key>
 
     <key name="cycle-preset-next" type="as">
@@ -228,9 +272,11 @@
     </key>
 
     <key name="restore-snap-group" type="as">
-      <default><![CDATA[['<Super><Shift>z']]]></default>
+      <default><![CDATA[['<Super><Shift>g']]]></default>
       <summary>Restore Snap Group</summary>
     </key>
+
+    <!-- ── Direct Zone Snap (advanced — unbound by default) ─────────── -->
 
     <key name="snap-to-zone-1" type="as">
       <default>[]</default>

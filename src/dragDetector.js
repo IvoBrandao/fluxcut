@@ -57,9 +57,13 @@ export const DragDetector = GObject.registerClass(
         }
 
         enable() {
+            // GNOME 45: grab-op-begin(display, window, grabOp) — 3 params
+            // GNOME 46+: grab-op-begin(display, window) — 2 params,
+            //            use display.get_grab_op() instead
             this._signalIds.push(
                 global.display.connect("grab-op-begin", (_dpy, win, op) => {
-                    if (op === Meta.GrabOp.MOVING)
+                    const grabOp = op ?? global.display.get_grab_op?.();
+                    if (grabOp === Meta.GrabOp.MOVING)
                         this._onDragBegin(win);
                 }),
                 global.display.connect("grab-op-end", (_dpy, win, _op) => {

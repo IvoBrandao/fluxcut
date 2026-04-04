@@ -79,10 +79,14 @@ export class SnapOverlay {
         });
         this._widget.grab_key_focus();
 
-        // Click-outside dismiss
+        // Click-outside dismiss (avoid event.get_source(), removed in GNOME 47+)
         this._captureId = global.stage.connect("captured-event", (_a, event) => {
             if (event.type() === Clutter.EventType.BUTTON_PRESS) {
-                if (!this._widget.contains(event.get_source()))
+                const [cx, cy] = event.get_coords();
+                const [wx, wy] = this._widget.get_transformed_position();
+                const ww = this._widget.width;
+                const wh = this._widget.height;
+                if (cx < wx || cx > wx + ww || cy < wy || cy > wy + wh)
                     this.close();
             }
             return false;

@@ -28,6 +28,7 @@ import { ZoneEditor } from "./src/zoneEditor.js";
 import { MaximizeHook } from "./src/maximizeHook.js";
 import { Keybindings } from "./src/keybindings.js";
 import { Indicator } from "./src/indicator.js";
+import { RoundedCorners } from "./src/roundedCorners.js";
 import { isFullyMaximized } from "./src/compat.js";
 
 // ---------------------------------------------------------------------------
@@ -139,7 +140,11 @@ class FluxCutController {
         this._keybindings = new Keybindings(this._settings, this, this._logger);
         this._keybindings.enable();
 
-        // Phase 13 — quick settings indicator
+        // Phase 13 — rounded window corners
+        this._roundedCorners = new RoundedCorners(this._settings, this._logger);
+        this._roundedCorners.enable();
+
+        // Phase 14 — quick settings indicator
         this._indicator = new Indicator(this._settings, this, this._logger);
         this._indicator.enable();
 
@@ -178,6 +183,7 @@ class FluxCutController {
 
         // Reverse order
         this._indicator?.disable();
+        this._roundedCorners?.disable();
         this._keybindings?.disable();
         this._restoreGnomeTiling();
         this._maximizeHook?.disable();
@@ -191,6 +197,7 @@ class FluxCutController {
         this._multiMonitor?.disable();
 
         this._indicator = null;
+        this._roundedCorners = null;
         this._keybindings = null;
         this._maximizeHook = null;
         this._zoneEditor = null;
@@ -339,13 +346,104 @@ class FluxCutController {
     }
 
     /**
+     * Snap a window to a target quarter, swapping with any occupant.
+     * If the target quarter is occupied by another window, that window
+     * moves to the current window's previous position.
+     */
+    _snapWithSwap(win, targetPreset, targetZone) {
+        if (!this._zoneManager || !this._windowTracker) return;
+
+        const monitorIndex = win.get_monitor();
+        const rects = this._zoneManager.getZoneRects(targetPreset, monitorIndex, this._settings.windowGapSize);
+        const targetRect = rects[targetZone];
+        if (!targetRect) return;
+
+        // Check for occupant at the target zone
+        const occupant = this._windowTracker.getWindowAtZone(targetPreset, targetZone, monitorIndex);
+        if (occupant && occupant !== win) {
+            const currentEntry = this._windowTracker.getSnapEntry(win);
+            if (currentEntry) {
+                // Swap: move occupant to the current window's old position
+                const srcRects = this._zoneManager.getZoneRects(
+                    currentEntry.presetId, monitorIndex, this._settings.windowGapSize
+                );
+                const srcRect = srcRects[currentEntry.zoneIndex];
+                if (srcRect) {
+                    this._windowTracker.snapWindow(
+                        occupant, currentEntry.presetId, currentEntry.zoneIndex, srcRect
+                    );
+                }
+            }
+        }
+
+        this._windowTracker.snapWindow(win, targetPreset, targetZone, targetRect);
+    }
+
+    /**
+     * Super+Left: Context-aware snap left.
+     *   Unsnapped            → left half
+     *   Right half           → left half
+     *   Left half            → left half (no change)
+     *   Top-right quarter    → top-left quarter (swap if occupied)
+     *   Bottom-right quarter → bottom-left quarter (swap if occupied)
+     *   Top-left quarter     → left half (already at left edge)
+     *   Bottom-left quarter  → left half (already at left edge)
+     */
+    snapFocusedLeft() {
+        if (!this._windowTracker) return;
+        const win = global.display.get_focus_window();
+        if (!win) return;
+
+        const entry = this._windowTracker.getSnapEntry(win);
+        if (!entry) return this.snapFocusedToPreset("halves", 0);
+
+        if (entry.presetId === "quarters") {
+            if (entry.zoneIndex === 1) return this._snapWithSwap(win, "quarters", 0); // top-right → top-left
+            if (entry.zoneIndex === 3) return this._snapWithSwap(win, "quarters", 2); // bottom-right → bottom-left
+            // Already on left side — expand to left half
+            return this.snapFocusedToPreset("halves", 0);
+        }
+
+        return this.snapFocusedToPreset("halves", 0);
+    }
+
+    /**
+     * Super+Right: Context-aware snap right.
+     *   Unsnapped            → right half
+     *   Left half            → right half
+     *   Right half           → right half (no change)
+     *   Top-left quarter     → top-right quarter (swap if occupied)
+     *   Bottom-left quarter  → bottom-right quarter (swap if occupied)
+     *   Top-right quarter    → right half (already at right edge)
+     *   Bottom-right quarter → right half (already at right edge)
+     */
+    snapFocusedRight() {
+        if (!this._windowTracker) return;
+        const win = global.display.get_focus_window();
+        if (!win) return;
+
+        const entry = this._windowTracker.getSnapEntry(win);
+        if (!entry) return this.snapFocusedToPreset("halves", 1);
+
+        if (entry.presetId === "quarters") {
+            if (entry.zoneIndex === 0) return this._snapWithSwap(win, "quarters", 1); // top-left → top-right
+            if (entry.zoneIndex === 2) return this._snapWithSwap(win, "quarters", 3); // bottom-left → bottom-right
+            // Already on right side — expand to right half
+            return this.snapFocusedToPreset("halves", 1);
+        }
+
+        return this.snapFocusedToPreset("halves", 1);
+    }
+
+    /**
      * Super+Up: Snap to upper quarter (context-aware).
      *   Unsnapped            → top-left quarter
      *   Left half            → top-left quarter
      *   Right half           → top-right quarter
-     *   Bottom-left quarter  → top-left quarter
-     *   Bottom-right quarter → top-right quarter
-     *   Other snapped        → top-left quarter
+     *   Bottom-left quarter  → top-left quarter (swap if occupied)
+     *   Bottom-right quarter → top-right quarter (swap if occupied)
+     *   Top-left quarter     → left half (already at top edge)
+     *   Top-right quarter    → right half (already at top edge)
      */
     snapFocusedToUpperQuarter() {
         if (!this._windowTracker) return;
@@ -354,17 +452,18 @@ class FluxCutController {
 
         const entry = this._windowTracker.getSnapEntry(win);
         if (!entry) {
-            // Default to top-left quarter
-            return this.snapFocusedToPreset("quarters", 0);
+            return this._snapWithSwap(win, "quarters", 0);
         }
 
-        if (entry.presetId === "halves"   && entry.zoneIndex === 0) return this.snapFocusedToPreset("quarters", 0);
-        if (entry.presetId === "halves"   && entry.zoneIndex === 1) return this.snapFocusedToPreset("quarters", 1);
-        if (entry.presetId === "quarters" && entry.zoneIndex === 2) return this.snapFocusedToPreset("quarters", 0);
-        if (entry.presetId === "quarters" && entry.zoneIndex === 3) return this.snapFocusedToPreset("quarters", 1);
+        if (entry.presetId === "halves"   && entry.zoneIndex === 0) return this._snapWithSwap(win, "quarters", 0);
+        if (entry.presetId === "halves"   && entry.zoneIndex === 1) return this._snapWithSwap(win, "quarters", 1);
+        if (entry.presetId === "quarters" && entry.zoneIndex === 2) return this._snapWithSwap(win, "quarters", 0);
+        if (entry.presetId === "quarters" && entry.zoneIndex === 3) return this._snapWithSwap(win, "quarters", 1);
+        // Already at top — expand to half
+        if (entry.presetId === "quarters" && entry.zoneIndex === 0) return this.snapFocusedToPreset("halves", 0);
+        if (entry.presetId === "quarters" && entry.zoneIndex === 1) return this.snapFocusedToPreset("halves", 1);
 
-        // Default to top-left quarter
-        return this.snapFocusedToPreset("quarters", 0);
+        return this._snapWithSwap(win, "quarters", 0);
     }
 
     /**
@@ -372,9 +471,10 @@ class FluxCutController {
      *   Unsnapped           → bottom-left quarter
      *   Left half           → bottom-left quarter
      *   Right half          → bottom-right quarter
-     *   Top-left quarter    → bottom-left quarter
-     *   Top-right quarter   → bottom-right quarter
-     *   Other snapped       → bottom-left quarter
+     *   Top-left quarter    → bottom-left quarter (swap if occupied)
+     *   Top-right quarter   → bottom-right quarter (swap if occupied)
+     *   Bottom-left quarter → left half (already at bottom edge)
+     *   Bottom-right quarter→ right half (already at bottom edge)
      */
     snapFocusedToLowerQuarter() {
         if (!this._windowTracker) return;
@@ -383,17 +483,18 @@ class FluxCutController {
 
         const entry = this._windowTracker.getSnapEntry(win);
         if (!entry) {
-            // Default to bottom-left quarter
-            return this.snapFocusedToPreset("quarters", 2);
+            return this._snapWithSwap(win, "quarters", 2);
         }
 
-        if (entry.presetId === "halves"   && entry.zoneIndex === 0) return this.snapFocusedToPreset("quarters", 2);
-        if (entry.presetId === "halves"   && entry.zoneIndex === 1) return this.snapFocusedToPreset("quarters", 3);
-        if (entry.presetId === "quarters" && entry.zoneIndex === 0) return this.snapFocusedToPreset("quarters", 2);
-        if (entry.presetId === "quarters" && entry.zoneIndex === 1) return this.snapFocusedToPreset("quarters", 3);
+        if (entry.presetId === "halves"   && entry.zoneIndex === 0) return this._snapWithSwap(win, "quarters", 2);
+        if (entry.presetId === "halves"   && entry.zoneIndex === 1) return this._snapWithSwap(win, "quarters", 3);
+        if (entry.presetId === "quarters" && entry.zoneIndex === 0) return this._snapWithSwap(win, "quarters", 2);
+        if (entry.presetId === "quarters" && entry.zoneIndex === 1) return this._snapWithSwap(win, "quarters", 3);
+        // Already at bottom — expand to half
+        if (entry.presetId === "quarters" && entry.zoneIndex === 2) return this.snapFocusedToPreset("halves", 0);
+        if (entry.presetId === "quarters" && entry.zoneIndex === 3) return this.snapFocusedToPreset("halves", 1);
 
-        // Default to bottom-left quarter
-        return this.snapFocusedToPreset("quarters", 2);
+        return this._snapWithSwap(win, "quarters", 2);
     }
 
     /**
@@ -428,24 +529,28 @@ class FluxCutController {
                 else if (direction === "down")  { targetPreset = "quarters"; targetZone = 3; }
             }
         } else if (entry.presetId === "quarters") {
-            // In a quarter — move to adjacent quarter or half
-            const quarterMap = {
-                0: { left: null, right: 1, up: null, down: 2 },    // top-left
-                1: { left: 0, right: null, up: null, down: 3 },    // top-right
-                2: { left: null, right: 3, up: 0, down: null },    // bottom-left
-                3: { left: 2, right: null, up: 1, down: null },    // bottom-right
+            // In a quarter — move to adjacent quarter, expand to half at edges
+            const quarterNav = {
+                0: { left: ["halves", 0], right: ["quarters", 1], up: ["halves", 0], down: ["quarters", 2] },
+                1: { left: ["quarters", 0], right: ["halves", 1], up: ["halves", 1], down: ["quarters", 3] },
+                2: { left: ["halves", 0], right: ["quarters", 3], up: ["quarters", 0], down: ["halves", 0] },
+                3: { left: ["quarters", 2], right: ["halves", 1], up: ["quarters", 1], down: ["halves", 1] },
             };
-            targetZone = quarterMap[entry.zoneIndex]?.[direction];
-            if (targetZone !== null && targetZone !== undefined) {
-                targetPreset = "quarters";
+            const nav = quarterNav[entry.zoneIndex]?.[direction];
+            if (nav) {
+                [targetPreset, targetZone] = nav;
             }
         }
 
         if (targetPreset && targetZone !== undefined) {
-            const rects = this._zoneManager.getZoneRects(targetPreset, monitorIndex, this._settings.windowGapSize);
-            const rect = rects[targetZone];
-            if (rect) {
-                this._windowTracker.snapWindow(win, targetPreset, targetZone, rect);
+            if (targetPreset === "quarters") {
+                this._snapWithSwap(win, targetPreset, targetZone);
+            } else {
+                const rects = this._zoneManager.getZoneRects(targetPreset, monitorIndex, this._settings.windowGapSize);
+                const rect = rects[targetZone];
+                if (rect) {
+                    this._windowTracker.snapWindow(win, targetPreset, targetZone, rect);
+                }
             }
         }
     }
@@ -558,5 +663,88 @@ class FluxCutController {
         if (groups.size === 0) return;
         const [key] = groups.keys();
         this._snapGroups.restoreGroup(key);
+    }
+
+    /**
+     * Cycle keyboard focus to the next snapped window on the current
+     * monitor+workspace.  Wraps around to the first window after the last.
+     */
+    focusCycleTiled() {
+        if (!this._windowTracker) return;
+        const currentWin = global.display.get_focus_window();
+        if (!currentWin) return;
+
+        const monitorIndex = currentWin.get_monitor();
+        const wsIndex = global.workspace_manager.get_active_workspace_index();
+
+        // Collect all snapped windows on this monitor+workspace, sorted by zone
+        const snapped = [];
+        for (const [windowId, entry] of this._windowTracker._snapped) {
+            if (entry.monitorIndex === monitorIndex && entry.workspaceIndex === wsIndex) {
+                const win = this._windowTracker._findWindowById(windowId);
+                if (win) snapped.push({ win, entry });
+            }
+        }
+
+        if (snapped.length === 0) return;
+
+        // Sort by spatial position: top-to-bottom, left-to-right
+        snapped.sort((a, b) => {
+            const ay = a.entry.zoneRect?.y ?? 0;
+            const by = b.entry.zoneRect?.y ?? 0;
+            if (ay !== by) return ay - by;
+            return (a.entry.zoneRect?.x ?? 0) - (b.entry.zoneRect?.x ?? 0);
+        });
+
+        // Find current window in list and advance
+        const currentIdx = snapped.findIndex(s => s.win === currentWin);
+        const nextIdx = (currentIdx + 1) % snapped.length;
+
+        const nextWin = snapped[nextIdx].win;
+        nextWin.activate(global.get_current_time());
+    }
+
+    /**
+     * Auto-tile all visible, non-snapped windows into the active preset's
+     * zones on the focused monitor.
+     */
+    autoTileToGrid() {
+        if (!this._zoneManager || !this._windowTracker || !this._multiMonitor) return;
+
+        const currentWin = global.display.get_focus_window();
+        const monitorIndex = currentWin?.get_monitor()
+            ?? global.display.get_current_monitor();
+        const wsIndex = global.workspace_manager.get_active_workspace_index();
+
+        // Get active preset for this monitor (default to "halves")
+        const presetId = this._multiMonitor.getActivePreset(monitorIndex) ?? "halves";
+        const rects = this._zoneManager.getZoneRects(presetId, monitorIndex, this._settings.windowGapSize);
+        if (!rects || rects.length === 0) return;
+
+        // Gather unsnapped + snapped-but-different-preset windows
+        const candidates = this._windowTracker.getUnsnappedWindows(monitorIndex, wsIndex);
+
+        // Also include already-snapped windows to redistribute
+        for (const [windowId, entry] of this._windowTracker._snapped) {
+            if (entry.monitorIndex === monitorIndex && entry.workspaceIndex === wsIndex) {
+                const win = this._windowTracker._findWindowById(windowId);
+                if (win && !candidates.includes(win)) candidates.push(win);
+            }
+        }
+
+        if (candidates.length === 0) return;
+
+        // Sort by current position: left-to-right, top-to-bottom
+        candidates.sort((a, b) => {
+            const ar = a.get_frame_rect();
+            const br = b.get_frame_rect();
+            if (ar.x !== br.x) return ar.x - br.x;
+            return ar.y - br.y;
+        });
+
+        // Assign windows to zones round-robin
+        for (let i = 0; i < candidates.length && i < rects.length; i++) {
+            this._windowTracker.snapWindow(candidates[i], presetId, i, rects[i]);
+        }
     }
 }

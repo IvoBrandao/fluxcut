@@ -20,27 +20,65 @@ const UUID = "fluxcut@gnome-tiling";
 const SCHEMA_ID = "org.gnome.shell.extensions.fluxcut";
 const KB_SCHEMA_ID = "org.gnome.shell.extensions.fluxcut.keybindings";
 
-// ── Keybinding names shown in Keybindings page ───────────────────────────────
-const KB_ROWS = [
-    { key: "snap-left-half",     label: "Snap left half",           desc: "Snap focused window to the left 50%" },
-    { key: "snap-right-half",    label: "Snap right half",          desc: "Snap focused window to the right 50%" },
-    { key: "snap-upper-quarter", label: "Snap upper quarter",       desc: "Snap focused window to the top-left quarter" },
-    { key: "snap-lower-quarter", label: "Snap lower quarter",       desc: "Snap focused window to the bottom-left quarter" },
-    { key: "snap-top-left",      label: "Snap top-left",            desc: "Snap focused window to the top-left corner" },
-    { key: "snap-top-right",     label: "Snap top-right",           desc: "Snap focused window to the top-right corner" },
-    { key: "snap-bottom-left",   label: "Snap bottom-left",         desc: "Snap focused window to the bottom-left corner" },
-    { key: "snap-bottom-right",  label: "Snap bottom-right",        desc: "Snap focused window to the bottom-right corner" },
-    { key: "move-swap-left",     label: "Move/swap window left",    desc: "Move focused window one zone left, or swap with neighbor" },
-    { key: "move-swap-right",    label: "Move/swap window right",   desc: "Move focused window one zone right, or swap with neighbor" },
-    { key: "move-swap-up",       label: "Move/swap window up",      desc: "Move focused window one zone up, or swap with neighbor" },
-    { key: "move-swap-down",     label: "Move/swap window down",    desc: "Move focused window one zone down, or swap with neighbor" },
-    { key: "open-snap-overlay",  label: "Open Snap Layout Picker",  desc: "Show the Super+Z snap layout popup" },
-    { key: "open-zone-editor",   label: "Open Zone Editor",         desc: "Open the full-screen zone drawing editor" },
-    { key: "move-monitor-left",  label: "Move to left monitor",     desc: "Move focused window to the monitor on the left" },
-    { key: "move-monitor-right", label: "Move to right monitor",    desc: "Move focused window to the monitor on the right" },
-    { key: "cycle-preset-next",  label: "Cycle preset forward",     desc: "Switch to the next layout preset" },
-    { key: "cycle-preset-prev",  label: "Cycle preset backward",    desc: "Switch to the previous layout preset" },
-    { key: "restore-snap-group", label: "Restore last snap group",  desc: "Reposition all windows to their last-saved snap group" },
+// ── Keybinding groups for Keybindings page (i3-inspired layout) ──────────────
+const KB_GROUPS = [
+    {
+        title: "Window Tiling",
+        description: "Super + arrow key snaps the focused window. Quarter-tiled windows navigate between quarters first.",
+        rows: [
+            { key: "snap-left-half",     label: "Tile Left / Navigate Left",  desc: "Snap to left half, or move quarter leftward" },
+            { key: "snap-right-half",    label: "Tile Right / Navigate Right", desc: "Snap to right half, or move quarter rightward" },
+            { key: "snap-upper-quarter", label: "Tile Up / Navigate Up",       desc: "Snap to upper quarter, or move quarter upward" },
+            { key: "snap-lower-quarter", label: "Tile Down / Navigate Down",   desc: "Snap to lower quarter, or move quarter downward" },
+        ],
+    },
+    {
+        title: "Direct Quarter Tiling",
+        description: "Super + U/I/J/K for instant quarter placement (spatial layout on keyboard).",
+        rows: [
+            { key: "snap-top-left",      label: "Quarter: Top-Left (U)",     desc: "Snap directly to top-left quarter" },
+            { key: "snap-top-right",     label: "Quarter: Top-Right (I)",    desc: "Snap directly to top-right quarter" },
+            { key: "snap-bottom-left",   label: "Quarter: Bottom-Left (J)",  desc: "Snap directly to bottom-left quarter" },
+            { key: "snap-bottom-right",  label: "Quarter: Bottom-Right (K)", desc: "Snap directly to bottom-right quarter" },
+        ],
+    },
+    {
+        title: "Move / Swap Window",
+        description: "Super+Shift + arrow key moves a window to the adjacent zone. Swaps with the occupant if that zone is taken.",
+        rows: [
+            { key: "move-swap-left",  label: "Move/Swap Left",  desc: "Move window one zone left, swap if occupied" },
+            { key: "move-swap-right", label: "Move/Swap Right", desc: "Move window one zone right, swap if occupied" },
+            { key: "move-swap-up",    label: "Move/Swap Up",    desc: "Move window one zone up, swap if occupied" },
+            { key: "move-swap-down",  label: "Move/Swap Down",  desc: "Move window one zone down, swap if occupied" },
+        ],
+    },
+    {
+        title: "Focus & Auto-Tile",
+        description: "Cycle focus between tiled windows or auto-tile all visible windows into the active grid layout.",
+        rows: [
+            { key: "focus-cycle-tiled", label: "Cycle Focus (Tiled Windows)", desc: "Move focus to the next snapped window" },
+            { key: "auto-tile-grid",    label: "Auto-Tile to Active Grid",    desc: "Tile all visible windows into the active layout" },
+        ],
+    },
+    {
+        title: "Monitor Movement",
+        description: "Super+Ctrl + arrow key moves the focused window to an adjacent monitor.",
+        rows: [
+            { key: "move-monitor-left",  label: "Move to Left Monitor",  desc: "Move window to the monitor on the left" },
+            { key: "move-monitor-right", label: "Move to Right Monitor", desc: "Move window to the monitor on the right" },
+        ],
+    },
+    {
+        title: "Layout & Overlay",
+        description: "Shortcuts for layout management and the snap overlay.",
+        rows: [
+            { key: "open-snap-overlay",  label: "Open Snap Layout Picker", desc: "Show the Super+Z layout chooser popup" },
+            { key: "open-zone-editor",   label: "Open Zone Editor",        desc: "Full-screen drag-to-draw zone editor" },
+            { key: "cycle-preset-next",  label: "Cycle Preset →",          desc: "Switch to the next layout preset" },
+            { key: "cycle-preset-prev",  label: "← Cycle Preset",          desc: "Switch to the previous layout preset" },
+            { key: "restore-snap-group", label: "Restore Snap Group",      desc: "Reposition windows to their last snap group" },
+        ],
+    },
 ];
 
 export default class FluxCutPreferences extends ExtensionPreferences {
@@ -119,6 +157,7 @@ export default class FluxCutPreferences extends ExtensionPreferences {
             ["snap-assist-enabled",        "Snap Assist",               "Show window thumbnails for remaining zones after snapping"],
             ["drag-zone-highlight-enabled","Zone Highlights on Drag",   "Highlight zones while dragging a window"],
             ["snap-groups-enabled",        "Snap Groups in Panel",      "Show snap group button in the top panel"],
+            ["rounded-corners-enabled",    "Rounded Window Corners",    "Apply rounded corners to all windows (radius configurable in Appearance)"],
         ];
 
         for (const [key, title, subtitle] of rows)
@@ -167,6 +206,16 @@ export default class FluxCutPreferences extends ExtensionPreferences {
             "RGBA border color of hovered zone highlight"
         ));
 
+        const cornersGroup = new Adw.PreferencesGroup({ title: "Rounded Corners" });
+        page.add(cornersGroup);
+
+        cornersGroup.add(this._spinRow(
+            settings, "rounded-corners-radius",
+            "Corner Radius (px)",
+            "Pixel radius for rounded window corners (enable in Features)",
+            1, 30, 1
+        ));
+
         return page;
     }
 
@@ -178,15 +227,17 @@ export default class FluxCutPreferences extends ExtensionPreferences {
             icon_name: "input-keyboard-symbolic",
         });
 
-        const group = new Adw.PreferencesGroup({
-            title: "Configurable Shortcuts",
-            description: "Click \"Set Shortcut\" to type a key combination (e.g. <Super>Left).\n" +
-                         "FluxCut automatically overrides conflicting GNOME tiling shortcuts.",
-        });
-        page.add(group);
+        // Build a group per category
+        for (const section of KB_GROUPS) {
+            const group = new Adw.PreferencesGroup({
+                title: section.title,
+                description: section.description,
+            });
+            page.add(group);
 
-        for (const { key, label, desc } of KB_ROWS)
-            group.add(this._keybindingRow(kbSettings, key, label, desc));
+            for (const { key, label, desc } of section.rows)
+                group.add(this._keybindingRow(kbSettings, key, label, desc));
+        }
 
         // Reset all keybindings button
         const resetGroup = new Adw.PreferencesGroup();
@@ -194,7 +245,7 @@ export default class FluxCutPreferences extends ExtensionPreferences {
 
         const resetRow = new Adw.ActionRow({
             title: "Reset All Keybindings",
-            subtitle: "Restore all shortcuts to their default values",
+            subtitle: "Restore all shortcuts to their i3-inspired defaults",
         });
         const resetBtn = new Gtk.Button({
             label: "Reset",
@@ -202,8 +253,9 @@ export default class FluxCutPreferences extends ExtensionPreferences {
             css_classes: ["destructive-action"],
         });
         resetBtn.connect("clicked", () => {
-            for (const { key } of KB_ROWS)
-                kbSettings.reset(key);
+            for (const section of KB_GROUPS)
+                for (const { key } of section.rows)
+                    kbSettings.reset(key);
             // Rebuild the page to refresh all labels
             const window = page.get_root();
             if (window) {
