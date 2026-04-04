@@ -108,9 +108,10 @@ describe("SnapGroupsManager", () => {
             windowTracker = makeWindowTracker();
             manager = new SnapGroupsManager(settings, windowTracker, animations, makeLogger());
             manager.enable();
-            assert.ok(manager._signalIds.length > 0);
+            assert.ok(manager._displaySignalIds.length > 0);
             manager.disable();
-            assert.equal(manager._signalIds.length, 0);
+            assert.equal(manager._displaySignalIds.length, 0);
+            assert.equal(manager._wmSignalIds.length, 0);
         });
     });
 

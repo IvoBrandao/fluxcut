@@ -1,6 +1,6 @@
-# FluxCut — Window Snap Zones for GNOME
+# FluxCut — Window Tiling Control for GNOME
 
-**FluxCut** is a GNOME Shell extension (45–49) that brings advanced snap zone tiling to GNOME. It provides drag-to-edge snapping, a visual layout picker, snap groups, a custom zone editor, and full keyboard control — designed natively for the Linux desktop.
+**FluxCut** (displayed as **Window Tiling Control** in the GNOME settings panel) is a GNOME Shell extension (45–49) that brings snap zone tiling to GNOME. It provides drag-to-edge snapping, a visual layout picker, snap groups, a custom zone editor, and full keyboard control — designed natively for the Linux desktop.
 
 ---
 
@@ -10,7 +10,7 @@
 2. [Features](#features)
    - [Zone System & Layout Presets](#zone-system--layout-presets)
    - [Drag-to-Edge Snapping](#drag-to-edge-snapping)
-   - [Snap Layout Overlay (Super+Z)](#snap-layout-overlay-winz)
+   - [Snap Layout Overlay (Super+Z)](#snap-layout-overlay-superz)
    - [Snap Assist](#snap-assist)
    - [Snap Groups](#snap-groups)
    - [Zone Highlights](#zone-highlights)
@@ -30,13 +30,13 @@
 
 ## Architecture Overview
 
-FluxCut uses a **layered controller pattern**. A single `FluxCutController` owns all subsystems and wires them together in a 12-phase enable sequence. Every subsystem is a self-contained class that connects to GNOME signals in `enable()` and cleans up in `disable()`.
+FluxCut uses a **layered controller pattern**. A single `FluxCutController` owns all subsystems and wires them together in a 13-phase enable sequence. Every subsystem is a self-contained class that connects to GNOME signals in `enable()` and cleans up in `disable()`.
 
 ```mermaid
 graph LR
     EXT[extension.js] --> CTL[FluxCutController]
 
-    CTL --> CORE["⚙ Core\nSettings · Logger · Animations\nZoneManager · CustomZoneStore"]
+    CTL --> CORE["⚙ Core\nSettings · Logger · Animations\nZoneManager · CustomZoneStore\nCompat"]
     CTL --> MON["🖥 Monitors & Windows\nMultiMonitorManager\nWindowTracker"]
     CTL --> DRAG["🖱 Drag & Highlights\nDragDetector\nZoneHighlighter · SnapGroups"]
     CTL --> OVL["🪟 Overlays\nSnapOverlay · SnapAssist\nZoneEditor"]
@@ -117,7 +117,17 @@ sequenceDiagram
 
 **Module:** `src/dragDetector.js`
 
-When a window is dragged (`Meta.GrabOp.MOVING`), `DragDetector` starts a **16 ms pointer-poll loop** using `GLib.timeout_add`. On each tick it calls `_getEdgeZone()` to check if the pointer is within the edge/corner threshold.
+When a window is dragged (`Meta.GrabOp.MOVING`, `KEYBOARD_MOVING`, or `MOVING_UNCONSTRAINED`), `DragDetector` starts a **16 ms pointer-poll loop** using `GLib.timeout_add`. On each tick it calls `_getEdgeZone()` to check if the pointer is within the edge/corner threshold.
+
+A **30-second safety timeout** limits the poll loop to prevent runaway polling if a `grab-op-end` signal is missed.
+
+#### GNOME Version Compatibility
+
+The `grab-op-begin` signal changed from 3 params `(display, window, grabOp)` in GNOME 45 to 2 params `(display, window)` in GNOME 46+. `DragDetector` handles this by falling back to `global.display.get_grab_op()` when the third param is undefined.
+
+#### Edge Detection Strategy
+
+Edge/corner proximity is detected against the **monitor geometry** (physical screen edge), but the resulting zone rectangles use the **workarea** (respecting panels/taskbars). This ensures drag-to-edge works even when the panel occupies part of the screen edge.
 
 #### Detection Priority (corners beat edges)
 
@@ -139,9 +149,13 @@ flowchart TD
     Q0 & Q1 & Q2 & Q3 & MAX & H0 & H1 --> EMIT
 ```
 
+#### Signal Design
+
+The `zone-hovered` and `zone-selected` GObject signals carry **only serializable params** (`presetId: string`, `monitorIndex: int`, `zoneIndex: int`). The full zone rect is exposed via the `hoveredZone` and `selectedZone` properties on the `DragDetector` instance — this avoids the GJS `GObject.TYPE_POINTER` marshalling crash that occurs when passing `Meta.Rectangle` through GObject signal params.
+
 On drag end, `DragDetector` emits `"zone-selected"`. If the last hovered zone has `isMaximize = true`, the window is maximized directly via `win.maximize(Meta.MaximizeFlags.BOTH)`.
 
-**Threshold clamped** to a minimum of 8 px to prevent accidental triggers.
+**Threshold clamped** to a minimum of 20 px to prevent accidental triggers.
 
 ---
 
@@ -219,6 +233,8 @@ stateDiagram-v2
 
 The panel button auto-refreshes on `active-workspace-changed`, `window-created`, and any direct `refresh()` call from `WindowTracker`.
 
+Signal subscriptions are tracked separately per GObject source (`_displaySignalIds` for `global.display`, `_wmSignalIds` for `global.workspace_manager`) to ensure correct cleanup on `disable()`.
+
 ---
 
 ### Zone Highlights
@@ -259,7 +275,13 @@ flowchart TD
     ADD & UPDATE --> CLOSE[close editor]
 ```
 
-All coordinates snap to a configurable grid (default **12 columns × 8 rows**, range 4–24 / 4–16). The minimum zone size is 40 px.
+All coordinates snap to a configurable grid (default **12 columns × 8 rows**, range 4–24 / 4–16). The minimum zone size is 40 px. Handle hit areas include **+8 px padding** for easier targeting.
+
+#### GNOME 47+ Compatibility
+
+- `captured-event` signal was removed in GNOME 47. The editor uses a try/catch fallback: first attempts `this._backdrop.grab()` + event handler, falls back to `captured-event` on `global.stage`.
+- `event.get_source()` was removed in GNOME 47. Zone/handle hit-testing uses coordinate-based `_findHandleAt(px, py)` and `_findZoneAt(px, py)` instead of relying on the event source actor.
+- The `grab()` return value is null-checked before storing (may return null on some GNOME versions).
 
 ---
 
@@ -301,39 +323,96 @@ The `bypass(windowId)` method sets a ~500 ms exemption so `snapFocusedUp` can ma
 
 **Module:** `src/keybindings.js`
 
-All keybindings are registered via `Main.wm.addKeybinding` against the `fluxcut.keybindings` GSettings child schema. They are user-configurable in the preferences UI.
+All keybindings are registered via `Main.wm.addKeybinding` against the `fluxcut.keybindings` GSettings child schema. They are user-configurable in the preferences UI, organized into six groups.
+
+#### Window Tiling (Super + direction)
+
+| Default Key | Action |
+|-------------|--------|
+| `Super+Left` | Snap left half / navigate quarter left |
+| `Super+Right` | Snap right half / navigate quarter right |
+| `Super+Up` | Snap upper quarter / navigate quarter up |
+| `Super+Down` | Snap lower quarter / navigate quarter down |
+
+#### Direct Quarter Placement (Super + U/I/J/K)
+
+| Default Key | Action |
+|-------------|--------|
+| `Super+U` | Snap to top-left quarter |
+| `Super+I` | Snap to top-right quarter |
+| `Super+J` | Snap to bottom-left quarter |
+| `Super+K` | Snap to bottom-right quarter |
+
+#### Move / Swap (Super+Shift + direction)
+
+| Default Key | Action |
+|-------------|--------|
+| `Super+Shift+Left` | Move/swap window left |
+| `Super+Shift+Right` | Move/swap window right |
+| `Super+Shift+Up` | Move/swap window up |
+| `Super+Shift+Down` | Move/swap window down |
+
+#### Focus & Auto-Tile
+
+| Default Key | Action |
+|-------------|--------|
+| `Super+Tab` | Cycle focus between tiled windows |
+| `Super+T` | Auto-tile all visible windows into active grid |
+
+#### Monitor Movement (Super+Ctrl + direction)
+
+| Default Key | Action |
+|-------------|--------|
+| `Super+Ctrl+Left` | Move window to left monitor |
+| `Super+Ctrl+Right` | Move window to right monitor |
+
+#### Layout & Overlay
 
 | Default Key | Action |
 |-------------|--------|
 | `Super+Z` | Open Snap Layout Overlay |
 | `Super+E` | Open Zone Editor |
-| `Super+Left` | Snap to Left Half |
-| `Super+Right` | Snap to Right Half |
-| `Super+Up` | Maximize / snap-up (context-aware) |
-| `Super+Down` | Restore / snap-down (context-aware) |
-| `Super+Home` | Snap to Top-Left Quarter |
-| `Super+Page Up` | Snap to Top-Right Quarter |
-| `Super+End` | Snap to Bottom-Left Quarter |
-| `Super+Page Down` | Snap to Bottom-Right Quarter |
-| `Super+Shift+Left` | Move window to left monitor |
-| `Super+Shift+Right` | Move window to right monitor |
-| `Super+[` | Cycle preset backward |
-| `Super+]` | Cycle preset forward |
-| `Super+G` | Restore last snap group |
+| `Super+]` | Cycle to next preset |
+| `Super+[` | Cycle to previous preset |
+| `Super+Shift+G` | Restore last snap group |
 
-**Context-aware `Super+Up` / `Super+Down`:**
+Six additional `snap-to-zone-N` keys (1–6) are available but unbound by default.
+
+#### GNOME Native Tiling Override
+
+On `enable()`, FluxCut disables conflicting GNOME native tiling:
+
+- `org.gnome.mutter` → `edge-tiling` set to `false`
+- `org.gnome.desktop.wm.keybindings` → `maximize` and `unmaximize` cleared
+- `org.gnome.mutter.keybindings` → `toggle-tiled-left` and `toggle-tiled-right` cleared
+
+All original values are saved and restored on `disable()`.
+
+**Context-aware navigation (quarters ↔ halves):**
 
 ```mermaid
 flowchart LR
-    UP([Super+Up]) --> US{unsnapped?}
-    US -->|yes| MAX[maximize]
-    US -->|no, in half| TQ[top quarter\nof same side]
-    US -->|otherwise| MAX
+    LEFT([Super+Left]) --> LS{current state?}
+    LS -->|unsnapped| LH[left half]
+    LS -->|right quarter| LQ[left quarter\nswap if occupied]
+    LS -->|left quarter| LH
 
-    DOWN([Super+Down]) --> MS{maximized?}
-    MS -->|yes| RESTORE[restore]
-    MS -->|no, in quarter| HALF[snap to half]
-    MS -->|otherwise| UNSNAP[unsnap / float]
+    RIGHT([Super+Right]) --> RS{current state?}
+    RS -->|unsnapped| RH[right half]
+    RS -->|left quarter| RQ[right quarter\nswap if occupied]
+    RS -->|right quarter| RH
+
+    UP([Super+Up]) --> US{current state?}
+    US -->|unsnapped| TLQ[top-left quarter]
+    US -->|left half| TLQ
+    US -->|bottom quarter| UQ[top quarter\nswap if occupied]
+    US -->|top quarter| UH[expand to half]
+
+    DOWN([Super+Down]) --> DS{current state?}
+    DS -->|unsnapped| BLQ[bottom-left quarter]
+    DS -->|left half| BLQ
+    DS -->|top quarter| DQ[bottom quarter\nswap if occupied]
+    DS -->|bottom quarter| DH[expand to half]
 ```
 
 ---
@@ -343,6 +422,8 @@ flowchart LR
 **Module:** `src/multiMonitor.js`
 
 `MultiMonitorManager` maintains a `MonitorInfo` record for each display (index, aspect ratio, is-ultra-wide, is-portrait, geometry, workarea). It rebuilds on `monitors-changed` and `workareas-changed` signals.
+
+> **GNOME 46+ note:** The `monitors-changed` signal moved from `global.display` to `Meta.MonitorManager`. `MultiMonitorManager` tries `Meta.MonitorManager.get()` first and falls back to `global.display` for GNOME 45.
 
 Each **monitor × workspace** pair has its own active preset, stored as a JSON map in GSettings so it persists across sessions.
 
@@ -367,12 +448,12 @@ Cross-monitor window moves (`moveFocusedToMonitor`) use `findClosestZoneIndex` t
 
 **Module:** `src/indicator.js`
 
-Adds a `FluxCutToggle` entry to the GNOME Quick Settings panel (the area opened by clicking the top-right corner). Uses the GNOME 43+ `QuickMenuToggle` API.
+Adds a **Window Tiling Control** toggle entry to the GNOME Quick Settings panel (the area opened by clicking the top-right corner). Uses the GNOME 43+ `QuickMenuToggle` API.
 
 ```mermaid
 block-beta
   columns 1
-  A["⊞ FluxCut ──────────────────────────────── toggle ON/OFF"]
+  A["⊞ Window Tiling Control ─────────────────── toggle ON/OFF"]
   B["  ├─ Snap Layout Picker ───────────────── ON / OFF"]
   C["  ├─ Snap Assist ────────────────────────  ON / OFF"]
   D["  ├─ Zone Highlights on Drag ──────────  ON / OFF"]
@@ -383,6 +464,8 @@ block-beta
 ```
 
 All toggles are bound directly to GSettings keys via `Gio.SettingsBindFlags.DEFAULT`, so changes take effect immediately without a restart.
+
+The `disable()` method guards against already-disposed widgets with try/catch blocks, since GNOME may auto-destroy Quick Settings items when the panel is rebuilt or on the lock screen.
 
 ---
 
@@ -411,6 +494,8 @@ classDiagram
         +enable()
         +disable()
         +snapFocusedToPreset(presetId, zoneIndex)
+        +snapFocusedLeft()
+        +snapFocusedRight()
         +snapFocusedUp()
         +snapFocusedDown()
         +toggleSnapOverlay()
@@ -418,6 +503,18 @@ classDiagram
         +cyclePreset(direction)
         +moveFocusedToMonitor(direction)
         +restoreLastSnapGroup()
+        +focusCycleTiled()
+        +autoTileToGrid()
+        -_snapWithSwap(win, preset, zone)
+        -_overrideGnomeTiling()
+        -_restoreGnomeTiling()
+    }
+
+    class Compat {
+        <<module>>
+        +makeRect(params) Rectangle
+        +getMaximizeFlags(win) number
+        +isFullyMaximized(win) boolean
     }
 
     class ZoneManager {
@@ -442,16 +539,19 @@ classDiagram
     class DragDetector {
         +enable()
         +disable()
+        +hoveredZone
+        +selectedZone
         -_getEdgeZone(px, py, monitorIndex)
         -_poll()
-        --signal-- zone-hovered
-        --signal-- zone-selected
+        --signal-- zone-hovered(presetId, monitorIndex, zoneIndex)
+        --signal-- zone-selected(presetId, monitorIndex, zoneIndex)
     }
 
     class WindowTracker {
         +snapWindow(win, presetId, zoneIndex, rect, animate, animations)
         +unsnapWindow(win)
         +getSnapEntry(win) SnapEntry
+        +getWindowAtZone(presetId, zoneIndex, monitorIndex) MetaWindow
         +getSnapGroup(win) SnapGroupMember[]
         +getActiveSnapGroups() Map
         +getUnsnappedWindows(monitorIndex, wsIndex) MetaWindow[]
@@ -468,6 +568,7 @@ classDiagram
         --signal-- monitors-updated
     }
 
+    FluxCutController --> Compat
     FluxCutController --> ZoneManager
     FluxCutController --> WindowTracker
     FluxCutController --> MultiMonitorManager
@@ -475,6 +576,7 @@ classDiagram
     ZoneManager --> CustomZoneStore
     WindowTracker --> ZoneManager
     WindowTracker --> MultiMonitorManager
+    DragDetector --> Compat
 ```
 
 ---
@@ -524,21 +626,28 @@ All settings live under the schema `org.gnome.shell.extensions.fluxcut`.
 
 | Key | Default |
 |-----|---------|
-| `open-snap-overlay` | `<Super>z` |
-| `open-zone-editor` | `<Super>e` |
 | `snap-left-half` | `<Super>Left` |
 | `snap-right-half` | `<Super>Right` |
-| `snap-maximize` | `<Super>Up` |
-| `snap-unsnap` | `<Super>Down` |
-| `snap-top-left` | `<Super>Home` |
-| `snap-top-right` | `<Super>Prior` |
-| `snap-bottom-left` | `<Super>End` |
-| `snap-bottom-right` | `<Super>Next` |
-| `move-monitor-left` | `<Super><Shift>Left` |
-| `move-monitor-right` | `<Super><Shift>Right` |
+| `snap-upper-quarter` | `<Super>Up` |
+| `snap-lower-quarter` | `<Super>Down` |
+| `snap-top-left` | `<Super>u` |
+| `snap-top-right` | `<Super>i` |
+| `snap-bottom-left` | `<Super>j` |
+| `snap-bottom-right` | `<Super>k` |
+| `move-swap-left` | `<Super><Shift>Left` |
+| `move-swap-right` | `<Super><Shift>Right` |
+| `move-swap-up` | `<Super><Shift>Up` |
+| `move-swap-down` | `<Super><Shift>Down` |
+| `focus-cycle-tiled` | `<Super>Tab` |
+| `auto-tile-grid` | `<Super>t` |
+| `move-monitor-left` | `<Super><Primary>Left` |
+| `move-monitor-right` | `<Super><Primary>Right` |
+| `open-snap-overlay` | `<Super>z` |
+| `open-zone-editor` | `<Super>e` |
 | `cycle-preset-next` | `<Super>bracketright` |
 | `cycle-preset-prev` | `<Super>bracketleft` |
-| `restore-snap-group` | `<Super>g` |
+| `restore-snap-group` | `<Super><Shift>g` |
+| `snap-to-zone-1` … `6` | *(unbound)* |
 
 ---
 
@@ -610,16 +719,25 @@ flowchart TD
 
 | Test File | Covers | Tests |
 |-----------|--------|-------|
-| `customZones.test.js` | `CustomZoneStore` CRUD, signal emission, ID generation | 12 |
-| `dragDetector.test.js` | Edge/corner detection, threshold clamping, drag-end emission | 16 |
+| `animations.test.js` | `fadeIn`, `fadeOut`, `slideIn`, `slideOut`, speed levels | 24 |
+| `controller.test.js` | `FluxCutController` enable/disable, snap methods, navigation | 35 |
+| `customZones.test.js` | `CustomZoneStore` CRUD, signal emission, ID generation | 15 |
+| `dragDetector.test.js` | Edge/corner detection, threshold clamping, grab-op compat, signal params | 19 |
 | `i18n.test.js` | `_()` and `ngettext()` with/without extension object | 5 |
+| `keybindings.test.js` | Binding registration, grouped shortcuts, enable/disable | 16 |
 | `layoutPresets.test.js` | All 8 presets, aspect-ratio filtering, normalization | 16 |
-| `logger.test.js` | Log levels, prefix, null-safety | 8 |
+| `logger.test.js` | Log levels, prefix, null-safety | 10 |
 | `maximizeHook.test.js` | Bypass set, recently-created guard, intercept logic | 10 |
-| `multiMonitor.test.js` | Preset key composition, per-ws/monitor state, cycle, persistence | 14 |
-| `windowTracker.test.js` | Snap/unsnap, group detection, `getUnsnappedWindows` | 21 |
-| `zoneManager.test.js` | `_normToPixel`, `getZoneRects`, `getHoveredZone`, monitor lookup | 22 |
-| **Total** | | **124** |
+| `multiMonitor-signals.test.js` | GNOME 46+ `MonitorManager` signal compatibility | 3 |
+| `multiMonitor.test.js` | Preset key composition, per-ws/monitor state, cycle, persistence | 13 |
+| `snapAssist.test.js` | Thumbnail picker, zone filling, timeout, workspace change | 13 |
+| `snapGroups.test.js` | Group tracking, panel button, signal cleanup | 10 |
+| `snapOverlay.test.js` | Layout picker, keyboard nav, preset buttons | 18 |
+| `windowTracker.test.js` | Snap/unsnap, group detection, `getWindowAtZone`, `getUnsnappedWindows` | 18 |
+| `zoneEditor.test.js` | Drawing, handles, grid snap, GNOME 47+ compat | 19 |
+| `zoneHighlight.test.js` | Overlay rendering, signal-driven updates | 17 |
+| `zoneManager.test.js` | `_normToPixel`, `getZoneRects`, `getHoveredZone`, monitor lookup | 18 |
+| **Total** | | **279** |
 
 ---
 
@@ -629,7 +747,7 @@ flowchart TD
 # Install dev dependencies (Node.js ≥ 20 required)
 npm install
 
-# Run all 124 tests
+# Run all 279 tests
 npm test
 
 # Watch mode

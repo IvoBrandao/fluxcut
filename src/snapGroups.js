@@ -21,8 +21,8 @@ export class SnapGroupsManager {
         this._button = null;
         this._popup = null;
         this._popupVisible = false;
-        this._signalIds = [];
-        this._wsSignalId = null;
+        this._displaySignalIds = [];
+        this._wmSignalIds = [];
     }
 
     enable() {
@@ -31,16 +31,19 @@ export class SnapGroupsManager {
         this._buildButton();
 
         // Refresh panel button when workspace changes or windows snap/unsnap
-        this._wsSignalId = global.workspace_manager.connect(
-            "active-workspace-changed",
-            () => this._refreshButton()
+        this._wmSignalIds.push(
+            global.workspace_manager.connect(
+                "active-workspace-changed",
+                () => this._refreshButton()
+            )
         );
-        this._signalIds.push(this._wsSignalId);
 
         // Recheck groups when any window is added or removed
-        this._signalIds.push(
+        this._displaySignalIds.push(
             global.display.connect("window-created", () => this._refreshButton()),
-            global.workspace_manager.connect("workspace-removed", () => this._refreshButton())
+        );
+        this._wmSignalIds.push(
+            global.workspace_manager.connect("workspace-removed", () => this._refreshButton()),
         );
 
         this._refreshButton();
@@ -49,11 +52,12 @@ export class SnapGroupsManager {
     disable() {
         this._closePopup();
 
-        for (const id of this._signalIds) {
+        for (const id of this._displaySignalIds)
             try { global.display.disconnect(id); } catch (_) {}
+        for (const id of this._wmSignalIds)
             try { global.workspace_manager.disconnect(id); } catch (_) {}
-        }
-        this._signalIds = [];
+        this._displaySignalIds = [];
+        this._wmSignalIds = [];
 
         this._button?.destroy();
         this._button = null;

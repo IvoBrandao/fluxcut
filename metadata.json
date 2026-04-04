@@ -1,7 +1,7 @@
 {
   "uuid": "fluxcut@gnome-tiling",
-  "name": "FluxCut",
-  "description": "Window Snap zones for GNOME: snap layout overlay, drag-to-edge, snap assist, snap groups, custom zone editor, and configurable keybindings.",
+  "name": "Window Tiling Control",
+  "description": "Window snap zones for GNOME: snap layout overlay, drag-to-edge, snap assist, snap groups, custom zone editor, and configurable keybindings.",
   "version": 1,
   "shell-version": ["45", "46", "47", "48", "49"],
   "session-modes": ["user", "unlock-dialog"],

@@ -155,6 +155,18 @@ class FluxCutController {
             this._onOverviewShowing.bind(this)
         );
 
+        // Watch master enable/disable toggle
+        this._enabledSignalId = this._settings.connect(
+            "changed::fluxcut-enabled",
+            this._onEnabledChanged.bind(this)
+        );
+
+        // If the toggle was already OFF before deferred init ran,
+        // soft-disable now so we don't leave GNOME settings overridden.
+        if (!this._settings.enabled) {
+            this._onEnabledChanged();
+        }
+
         this._logger.info("FluxCut enabled");
     }
 
@@ -174,6 +186,10 @@ class FluxCutController {
         if (this._overviewShowId) {
             Main.overview.disconnect(this._overviewShowId);
             this._overviewShowId = null;
+        }
+        if (this._enabledSignalId) {
+            this._settings.disconnect(this._enabledSignalId);
+            this._enabledSignalId = null;
         }
 
         // Reverse order
@@ -232,6 +248,32 @@ class FluxCutController {
         this._snapAssist?.destroyAll();
         this._zoneEditor?.close();
         this._zoneHighlighter?.clearAll();
+    }
+
+    _onEnabledChanged() {
+        const enabled = this._settings.enabled;
+        this._logger?.info(`FluxCut ${enabled ? "re-enabled" : "soft-disabled"} via settings`);
+
+        if (enabled) {
+            this._overrideGnomeTiling();
+            this._keybindings?.enable();
+            this._dragDetector?.enable();
+            this._maximizeHook?.enable();
+            this._indicator?.show();
+        } else {
+            // Close any open overlays
+            this._snapOverlay?.close();
+            this._snapAssist?.destroyAll();
+            this._zoneEditor?.close();
+            this._zoneHighlighter?.clearAll();
+            // Disable subsystems
+            this._keybindings?.disable();
+            this._dragDetector?.disable();
+            this._maximizeHook?.disable();
+            this._indicator?.hide();
+            // Restore GNOME native tiling
+            this._restoreGnomeTiling();
+        }
     }
 
     // ------------------------------------------------------------------ GNOME native tiling override
@@ -316,6 +358,10 @@ class FluxCutController {
         this._mutterSettings = null;
         this._wmSettings = null;
         this._mutterKbSettings = null;
+
+        // Flush to disk so the restored values survive a shell crash.
+        try { Gio.Settings.sync(); } catch (_) {}
+
         this._logger?.debug("Restored GNOME native tiling settings");
     }
 

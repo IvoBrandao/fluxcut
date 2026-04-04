@@ -141,7 +141,8 @@ export class ZoneEditor {
             this._captureId = this._backdrop.connect("captured-event", handler);
         } catch (_) {
             // GNOME 47+: captured-event removed. Use grab + event instead.
-            this._grab = this._backdrop.grab();
+            const grab = this._backdrop.grab();
+            if (grab) this._grab = grab;
             this._captureId = this._backdrop.connect("event", handler);
         }
 

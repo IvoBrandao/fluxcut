@@ -27,7 +27,7 @@ const FluxCutToggle = GObject.registerClass(
     class FluxCutToggle extends QuickSettings.QuickMenuToggle {
         _init(settings, controller) {
             super._init({
-                title: "FluxCut",
+                title: "Window Tiling Control",
                 iconName: "view-grid-symbolic",
                 toggleMode: true,
             });
@@ -48,7 +48,7 @@ const FluxCutToggle = GObject.registerClass(
         }
 
         _buildMenu() {
-            this.menu.setHeader("view-grid-symbolic", "FluxCut");
+            this.menu.setHeader("view-grid-symbolic", "Window Tiling Control");
 
             // Feature toggles
             const toggles = [

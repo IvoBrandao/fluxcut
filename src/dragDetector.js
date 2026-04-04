@@ -128,9 +128,13 @@ export const DragDetector = GObject.registerClass(
 
         _startPolling() {
             if (this._pollId) return;
+            this._pollStart = GLib.get_monotonic_time();
+            const MAX_POLL_US = 30 * 1000000; // 30 seconds safety limit
             this._pollId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 16, () => {
-                if (!this._dragging) {
+                if (!this._dragging ||
+                    GLib.get_monotonic_time() - this._pollStart > MAX_POLL_US) {
                     this._pollId = null;
+                    if (this._dragging) this._onDragEnd();
                     return GLib.SOURCE_REMOVE;
                 }
                 this._poll();

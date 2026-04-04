@@ -108,8 +108,8 @@ export default class FluxCutPreferences extends ExtensionPreferences {
         // Master enable
         group.add(this._switchRow(
             settings, "fluxcut-enabled",
-            "Enable FluxCut",
-            "Master switch for all FluxCut features"
+            "Enable Window Tiling",
+            "Master switch for all window tiling features"
         ));
 
         // Window gap
