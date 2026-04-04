@@ -127,20 +127,6 @@
       <description>0 = Off, 1 = Error, 2 = Warn, 3 = Info, 4 = Debug.</description>
     </key>
 
-    <!-- Rounded corners -->
-    <key name="rounded-corners-enabled" type="b">
-      <default>false</default>
-      <summary>Enable Rounded Window Corners</summary>
-      <description>Apply rounded corners to all windows.</description>
-    </key>
-
-    <key name="rounded-corners-radius" type="u">
-      <default>12</default>
-      <range min="1" max="30"/>
-      <summary>Corner Radius (px)</summary>
-      <description>The radius in pixels for rounded window corners.</description>
-    </key>
-
   </schema>
 
   <!-- ======================================================

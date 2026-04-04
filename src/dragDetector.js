@@ -14,28 +14,26 @@ export const DragDetector = GObject.registerClass(
         Signals: {
             /**
              * Emitted when the pointer hovers over a snap zone during drag.
-             * @param {string|null} presetId
+             * Read hoveredZone for zone details (rect etc.).
+             * @param {string} presetId
              * @param {number} monitorIndex
-             * @param {Meta.Rectangle|null} zoneRect
              * @param {number} zoneIndex
              */
             "zone-hovered": {
                 param_types: [
                     GObject.TYPE_STRING,  // presetId (or "")
                     GObject.TYPE_INT,     // monitorIndex
-                    GObject.TYPE_POINTER, // zoneRect (boxed Meta.Rectangle or null-pointer)
                     GObject.TYPE_INT,     // zoneIndex (-1 if none)
                 ],
             },
             /**
              * Emitted when a drag ends (with or without a zone selection).
-             * Same parameters as zone-hovered.
+             * Read selectedZone for zone details (rect etc.).
              */
             "zone-selected": {
                 param_types: [
                     GObject.TYPE_STRING,
                     GObject.TYPE_INT,
-                    GObject.TYPE_POINTER,
                     GObject.TYPE_INT,
                 ],
             },
@@ -54,16 +52,24 @@ export const DragDetector = GObject.registerClass(
             this._dragging = false;
             this._draggedWindow = null;
             this._lastHoveredZone = null; // { presetId, monitorIndex, rect, zoneIndex }
+
+            /** @type {{ presetId: string, monitorIndex: number, rect, zoneIndex: number }|null} */
+            this.hoveredZone = null;
+            /** @type {{ presetId: string, monitorIndex: number, rect, zoneIndex: number }|null} */
+            this.selectedZone = null;
         }
 
         enable() {
-            // GNOME 45: grab-op-begin(display, window, grabOp) — 3 params
-            // GNOME 46+: grab-op-begin(display, window) — 2 params,
-            //            use display.get_grab_op() instead
+            // GNOME 45-49: grab-op-begin(display, window, grabOp) — 3 params.
+            // Some versions may drop the 3rd param; fall back to
+            // display.get_grab_op() when available.
             this._signalIds.push(
                 global.display.connect("grab-op-begin", (_dpy, win, op) => {
-                    const grabOp = op ?? global.display.get_grab_op?.();
-                    if (grabOp === Meta.GrabOp.MOVING)
+                    const grabOp = op ?? global.display.get_grab_op?.() ?? 0;
+                    // Accept mouse-move, keyboard-move, and unconstrained move
+                    if (grabOp === Meta.GrabOp.MOVING ||
+                        grabOp === Meta.GrabOp.KEYBOARD_MOVING ||
+                        grabOp === Meta.GrabOp.MOVING_UNCONSTRAINED)
                         this._onDragBegin(win);
                 }),
                 global.display.connect("grab-op-end", (_dpy, win, _op) => {
@@ -102,16 +108,18 @@ export const DragDetector = GObject.registerClass(
             if (last?.isMaximize) {
                 // Top-edge drag → maximize directly
                 win?.maximize(Meta.MaximizeFlags.BOTH);
-                this.emit("zone-selected", "", -1, null, -1);
+                this.selectedZone = null;
+                this.emit("zone-selected", "", -1, -1);
             } else if (last) {
+                this.selectedZone = { presetId: last.presetId, monitorIndex: last.monitorIndex, rect: last.rect, zoneIndex: last.zoneIndex };
                 this.emit("zone-selected",
                     last.presetId,
                     last.monitorIndex,
-                    last.rect,
                     last.zoneIndex
                 );
             } else {
-                this.emit("zone-selected", "", -1, null, -1);
+                this.selectedZone = null;
+                this.emit("zone-selected", "", -1, -1);
             }
 
             this._lastHoveredZone = null;
@@ -154,7 +162,8 @@ export const DragDetector = GObject.registerClass(
                 if (!hit) {
                     if (this._lastHoveredZone) {
                         this._lastHoveredZone = null;
-                        this.emit("zone-hovered", "", monitorIndex, null, -1);
+                        this.hoveredZone = null;
+                        this.emit("zone-hovered", "", monitorIndex, -1);
                     }
                     return;
                 }
@@ -170,41 +179,50 @@ export const DragDetector = GObject.registerClass(
 
             if (changed) {
                 this._lastHoveredZone = { presetId, monitorIndex, rect, zoneIndex, isMaximize };
-                this.emit("zone-hovered", presetId, monitorIndex, rect, zoneIndex);
+                this.hoveredZone = { presetId, monitorIndex, rect, zoneIndex };
+                this.emit("zone-hovered", presetId, monitorIndex, zoneIndex);
             }
         }
 
         /**
          * Check whether the pointer is within the edge/corner snap threshold of
-         * the monitor workarea and return a hardcoded zone if so.
+         * the monitor and return a hardcoded zone if so.
+         *
+         * Uses the MONITOR geometry for proximity detection (users drag to the
+         * physical screen edge) but the WORKAREA for the resulting zone rects
+         * (so windows don't overlap the panel/taskbar).
          *
          * Priority: corners > top edge (maximize) > left/right edges.
          *
          * @returns {{ presetId, zoneIndex, rect: Meta.Rectangle, isMaximize: boolean }|null}
          */
         _getEdgeZone(px, py, monitorIndex) {
+            // Monitor geometry for proximity detection
+            const mon = global.display.get_monitor_geometry(monitorIndex);
+            if (!mon) return null;
+
+            // Workarea for zone rects
             let wa;
             try {
                 wa = this._draggedWindow
                     ? this._draggedWindow.get_work_area_for_monitor(monitorIndex)
-                    : global.display.get_monitor_geometry(monitorIndex);
+                    : mon;
             } catch (_) {
-                wa = global.display.get_monitor_geometry(monitorIndex);
+                wa = mon;
             }
             if (!wa) return null;
 
-            const { x, y, width: w, height: h } = wa;
-            const T = Math.max(this._settings.dragEdgeThreshold ?? 20, 8);
+            const T = Math.max(this._settings.dragEdgeThreshold ?? 20, 20);
             const C = T * 2; // corner detection box
 
-            const nearLeft   = px < x + C;
-            const nearRight  = px > x + w - C;
-            const nearTop    = py < y + C;
-            const nearBottom = py > y + h - C;
+            // Detect proximity to MONITOR edges (not workarea)
+            const nearLeft   = px < mon.x + C;
+            const nearRight  = px > mon.x + mon.width - C;
+            const nearTop    = py < mon.y + C;
+            const nearBottom = py > mon.y + mon.height - C;
 
+            const { x, y, width: w, height: h } = wa;
             const g = this._settings.windowGapSize ?? 0;
-            // Gap logic matches ZoneManager._normToPixel: half-gap inset on
-            // each edge (giving full-gap between adjacent zones).
             const halfG = g / 2;
             const mk = (rx, ry, rw, rh) => makeRect({
                 x:      Math.round(rx + halfG),
@@ -219,12 +237,13 @@ export const DragDetector = GObject.registerClass(
             if (nearLeft  && nearBottom) return { presetId: "quarters", zoneIndex: 2, rect: mk(x,       y + h/2, w / 2, h / 2), isMaximize: false };
             if (nearRight && nearBottom) return { presetId: "quarters", zoneIndex: 3, rect: mk(x + w/2, y + h/2, w / 2, h / 2), isMaximize: false };
 
-            // Top edge → maximize
-            if (py < y + T) return { presetId: "__maximize__", zoneIndex: -1, rect: mk(x, y, w, h), isMaximize: true };
+            // Top edge → maximize (use same threshold as corners since monitor
+            // edge is further from workarea edge when panel is present)
+            if (py < mon.y + T) return { presetId: "__maximize__", zoneIndex: -1, rect: mk(x, y, w, h), isMaximize: true };
 
-            // Side edges → left/right halves
-            if (px < x + T)     return { presetId: "halves", zoneIndex: 0, rect: mk(x,       y, w / 2, h), isMaximize: false };
-            if (px > x + w - T) return { presetId: "halves", zoneIndex: 1, rect: mk(x + w/2, y, w / 2, h), isMaximize: false };
+            // Side edges → left/right halves (detect from monitor edge)
+            if (px < mon.x + T)              return { presetId: "halves", zoneIndex: 0, rect: mk(x,       y, w / 2, h), isMaximize: false };
+            if (px > mon.x + mon.width - T)  return { presetId: "halves", zoneIndex: 1, rect: mk(x + w/2, y, w / 2, h), isMaximize: false };
 
             return null;
         }

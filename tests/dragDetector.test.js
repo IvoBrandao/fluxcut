@@ -38,31 +38,37 @@ class DragDetectorShim {
     }
 
     _getEdgeZone(px, py, monitorIndex) {
+        // Mirror production: detect proximity from MONITOR edge, zone rects from workarea
+        const mon = global.display.get_monitor_geometry(monitorIndex);
+        if (!mon) return null;
+
         let wa;
         try {
             wa = this._draggedWindow
                 ? this._draggedWindow.get_work_area_for_monitor(monitorIndex)
-                : global.display.get_monitor_geometry(monitorIndex);
+                : mon;
         } catch (_) {
-            wa = global.display.get_monitor_geometry(monitorIndex);
+            wa = mon;
         }
         if (!wa) return null;
 
-        const { x, y, width: w, height: h } = wa;
-        const T = Math.max(this._settings.dragEdgeThreshold ?? 20, 8);
+        const T = Math.max(this._settings.dragEdgeThreshold ?? 20, 20);
         const C = T * 2;
 
-        const nearLeft   = px < x + C;
-        const nearRight  = px > x + w - C;
-        const nearTop    = py < y + C;
-        const nearBottom = py > y + h - C;
+        // Detect proximity to MONITOR edges
+        const nearLeft   = px < mon.x + C;
+        const nearRight  = px > mon.x + mon.width - C;
+        const nearTop    = py < mon.y + C;
+        const nearBottom = py > mon.y + mon.height - C;
 
+        const { x, y, width: w, height: h } = wa;
         const g = this._settings.windowGapSize ?? 0;
+        const halfG = g / 2;
         const mk = (rx, ry, rw, rh) => mkRect(
-            Math.round(rx + g),
-            Math.round(ry + g),
-            Math.round(rw - g * 2),
-            Math.round(rh - g * 2)
+            Math.round(rx + halfG),
+            Math.round(ry + halfG),
+            Math.round(rw - g),
+            Math.round(rh - g)
         );
 
         if (nearLeft  && nearTop)    return { presetId: "quarters", zoneIndex: 0, rect: mk(x,       y,       w / 2, h / 2), isMaximize: false };
@@ -70,10 +76,10 @@ class DragDetectorShim {
         if (nearLeft  && nearBottom) return { presetId: "quarters", zoneIndex: 2, rect: mk(x,       y + h/2, w / 2, h / 2), isMaximize: false };
         if (nearRight && nearBottom) return { presetId: "quarters", zoneIndex: 3, rect: mk(x + w/2, y + h/2, w / 2, h / 2), isMaximize: false };
 
-        if (py < y + T) return { presetId: "__maximize__", zoneIndex: -1, rect: mk(x, y, w, h), isMaximize: true };
+        if (py < mon.y + T) return { presetId: "__maximize__", zoneIndex: -1, rect: mk(x, y, w, h), isMaximize: true };
 
-        if (px < x + T)     return { presetId: "halves", zoneIndex: 0, rect: mk(x,       y, w / 2, h), isMaximize: false };
-        if (px > x + w - T) return { presetId: "halves", zoneIndex: 1, rect: mk(x + w/2, y, w / 2, h), isMaximize: false };
+        if (px < mon.x + T)              return { presetId: "halves", zoneIndex: 0, rect: mk(x,       y, w / 2, h), isMaximize: false };
+        if (px > mon.x + mon.width - T)  return { presetId: "halves", zoneIndex: 1, rect: mk(x + w/2, y, w / 2, h), isMaximize: false };
 
         return null;
     }
@@ -82,11 +88,14 @@ class DragDetectorShim {
         const last = this._lastHoveredZone;
         if (last?.isMaximize) {
             this._draggedWindow?.maximize?.();
-            this.emit("zone-selected", "", -1, null, -1);
+            this.selectedZone = null;
+            this.emit("zone-selected", "", -1, -1);
         } else if (last) {
-            this.emit("zone-selected", last.presetId, last.monitorIndex, last.rect, last.zoneIndex);
+            this.selectedZone = { presetId: last.presetId, monitorIndex: last.monitorIndex, rect: last.rect, zoneIndex: last.zoneIndex };
+            this.emit("zone-selected", last.presetId, last.monitorIndex, last.zoneIndex);
         } else {
-            this.emit("zone-selected", "", -1, null, -1);
+            this.selectedZone = null;
+            this.emit("zone-selected", "", -1, -1);
         }
         this._lastHoveredZone = null;
         this._draggedWindow = null;
@@ -153,10 +162,10 @@ describe("DragDetector._getEdgeZone — corners (priority over edges)", () => {
     it("gap is applied to corner rects", () => {
         const d = makeShim(20, 8);
         const z = d._getEdgeZone(5, 5, 0);
-        assert.equal(z.rect.x, 8);     // 0 + gap
-        assert.equal(z.rect.y, 8);
-        assert.equal(z.rect.width, 960 - 16);
-        assert.equal(z.rect.height, 540 - 16);
+        assert.equal(z.rect.x, 4);     // 0 + halfGap
+        assert.equal(z.rect.y, 4);
+        assert.equal(z.rect.width, 960 - 8);
+        assert.equal(z.rect.height, 540 - 8);
     });
 });
 
@@ -251,9 +260,9 @@ describe("DragDetector._getEdgeZone — threshold clamping", () => {
         setupGnomeGlobals({ monitors: [WA] });
     });
 
-    it("clamps threshold to at least 8px", () => {
-        const d = makeShim(0);  // threshold=0 → clamped to 8
-        // px=5 < 8*2=16 → corner; py=5 → corner detected
+    it("clamps threshold to at least 20px", () => {
+        const d = makeShim(0);  // threshold=0 → clamped to 20
+        // px=5 < 20*2=40 → corner; py=5 → corner detected
         const z = d._getEdgeZone(5, 5, 0);
         assert.ok(z, "corner should still be detected with clamp");
     });
@@ -272,7 +281,7 @@ describe("DragDetector._onDragEnd", () => {
         assert.equal(signal, "zone-selected");
         assert.equal(args[0], "");
         assert.equal(args[1], -1);
-        assert.equal(args[3], -1);
+        assert.equal(args[2], -1);
     });
 
     it("emits zone-selected with preset data when a zone was hovered", () => {
@@ -285,7 +294,7 @@ describe("DragDetector._onDragEnd", () => {
         const { args } = d._emitted[0];
         assert.equal(args[0], "halves");
         assert.equal(args[1], 0);
-        assert.equal(args[3], 0);
+        assert.equal(args[2], 0);
     });
 
     it("calls window.maximize when isMaximize=true and emits zone-selected(-1)", () => {

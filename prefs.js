@@ -157,7 +157,6 @@ export default class FluxCutPreferences extends ExtensionPreferences {
             ["snap-assist-enabled",        "Snap Assist",               "Show window thumbnails for remaining zones after snapping"],
             ["drag-zone-highlight-enabled","Zone Highlights on Drag",   "Highlight zones while dragging a window"],
             ["snap-groups-enabled",        "Snap Groups in Panel",      "Show snap group button in the top panel"],
-            ["rounded-corners-enabled",    "Rounded Window Corners",    "Apply rounded corners to all windows (radius configurable in Appearance)"],
         ];
 
         for (const [key, title, subtitle] of rows)
@@ -204,16 +203,6 @@ export default class FluxCutPreferences extends ExtensionPreferences {
             settings, "zone-border-color",
             "Highlight Border Color",
             "RGBA border color of hovered zone highlight"
-        ));
-
-        const cornersGroup = new Adw.PreferencesGroup({ title: "Rounded Corners" });
-        page.add(cornersGroup);
-
-        cornersGroup.add(this._spinRow(
-            settings, "rounded-corners-radius",
-            "Corner Radius (px)",
-            "Pixel radius for rounded window corners (enable in Features)",
-            1, 30, 1
         ));
 
         return page;

@@ -28,7 +28,6 @@ import { ZoneEditor } from "./src/zoneEditor.js";
 import { MaximizeHook } from "./src/maximizeHook.js";
 import { Keybindings } from "./src/keybindings.js";
 import { Indicator } from "./src/indicator.js";
-import { RoundedCorners } from "./src/roundedCorners.js";
 import { isFullyMaximized } from "./src/compat.js";
 
 // ---------------------------------------------------------------------------
@@ -140,11 +139,7 @@ class FluxCutController {
         this._keybindings = new Keybindings(this._settings, this, this._logger);
         this._keybindings.enable();
 
-        // Phase 13 — rounded window corners
-        this._roundedCorners = new RoundedCorners(this._settings, this._logger);
-        this._roundedCorners.enable();
-
-        // Phase 14 — quick settings indicator
+        // Phase 13 — quick settings indicator
         this._indicator = new Indicator(this._settings, this, this._logger);
         this._indicator.enable();
 
@@ -183,7 +178,6 @@ class FluxCutController {
 
         // Reverse order
         this._indicator?.disable();
-        this._roundedCorners?.disable();
         this._keybindings?.disable();
         this._restoreGnomeTiling();
         this._maximizeHook?.disable();
@@ -197,7 +191,6 @@ class FluxCutController {
         this._multiMonitor?.disable();
 
         this._indicator = null;
-        this._roundedCorners = null;
         this._keybindings = null;
         this._maximizeHook = null;
         this._zoneEditor = null;

@@ -500,15 +500,18 @@ export class ZoneEditor {
     /**
      * Find the handle actor at the given local coordinates (backdrop-relative).
      * Replaces event.get_source() which was removed in GNOME 47+.
+     * Hit area is padded by HANDLE_PAD so handles are easy to click.
      */
     _findHandleAt(lx, ly) {
+        const PAD = 8;
         for (const zone of this._zones) {
             for (const h of zone.handles) {
                 const hx = h.x;
                 const hy = h.y;
                 const hw = h.width || HANDLE_SIZE;
                 const hh = h.height || HANDLE_SIZE;
-                if (lx >= hx && lx <= hx + hw && ly >= hy && ly <= hy + hh)
+                if (lx >= hx - PAD && lx <= hx + hw + PAD &&
+                    ly >= hy - PAD && ly <= hy + hh + PAD)
                     return h;
             }
         }

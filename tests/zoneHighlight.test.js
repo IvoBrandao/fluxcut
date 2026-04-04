@@ -194,14 +194,14 @@ describe("ZoneHighlighter", () => {
         });
 
         it("shows zones on first hover with preset", () => {
-            dragDetector._emit("zone-hovered", "halves", 0, new Rect(0, 0, 960, 1080), 0);
+            dragDetector._emit("zone-hovered", "halves", 0, 0);
             assert.equal(highlighter._highlights.length, 4); // mock zoneManager returns 4
             assert.equal(highlighter._currentPreset, "halves");
         });
 
         it("clears on hover with empty preset", () => {
-            dragDetector._emit("zone-hovered", "halves", 0, new Rect(0, 0, 960, 1080), 0);
-            dragDetector._emit("zone-hovered", "", 0, null, -1);
+            dragDetector._emit("zone-hovered", "halves", 0, 0);
+            dragDetector._emit("zone-hovered", "", 0, -1);
             assert.equal(highlighter._highlights.length, 0);
         });
     });
@@ -218,7 +218,8 @@ describe("ZoneHighlighter", () => {
             dragDetector._draggedWindow = mockWin;
 
             const rect = new Rect(0, 0, 960, 1080);
-            dragDetector._emit("zone-selected", "halves", 0, rect, 0);
+            dragDetector.selectedZone = { presetId: "halves", monitorIndex: 0, rect, zoneIndex: 0 };
+            dragDetector._emit("zone-selected", "halves", 0, 0);
 
             assert.deepEqual(windowTracker._calls[0], [
                 "snapWindow", mockWin, "halves", 0, rect,
@@ -227,7 +228,7 @@ describe("ZoneHighlighter", () => {
 
         it("clears highlights when zone-selected with no zone", () => {
             highlighter.showPreviewForPreset("quarters", 0);
-            dragDetector._emit("zone-selected", "", 0, null, -1);
+            dragDetector._emit("zone-selected", "", 0, -1);
             assert.equal(highlighter._highlights.length, 0);
         });
     });

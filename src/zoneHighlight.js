@@ -25,11 +25,11 @@ export class ZoneHighlighter {
 
     enable() {
         this._signalIds.push(
-            this._dragDetector.connect("zone-hovered", (_, presetId, monitorIdx, rect, zoneIndex) => {
-                this._onZoneHovered(presetId, monitorIdx, rect, zoneIndex);
+            this._dragDetector.connect("zone-hovered", (_, presetId, monitorIdx, zoneIndex) => {
+                this._onZoneHovered(presetId, monitorIdx, zoneIndex);
             }),
-            this._dragDetector.connect("zone-selected", (_, presetId, monitorIdx, rect, zoneIndex) => {
-                this._onZoneSelected(presetId, monitorIdx, rect, zoneIndex);
+            this._dragDetector.connect("zone-selected", (_, presetId, monitorIdx, zoneIndex) => {
+                this._onZoneSelected(presetId, monitorIdx, zoneIndex);
             })
         );
     }
@@ -65,7 +65,7 @@ export class ZoneHighlighter {
 
     // ------------------------------------------------------------------ private
 
-    _onZoneHovered(presetId, monitorIndex, rect, zoneIndex) {
+    _onZoneHovered(presetId, monitorIndex, zoneIndex) {
         if (!presetId || zoneIndex === -1) {
             this.clearAll();
             return;
@@ -78,19 +78,20 @@ export class ZoneHighlighter {
             this._updateActiveZone(zoneIndex);
     }
 
-    _onZoneSelected(presetId, monitorIndex, rect, zoneIndex) {
+    _onZoneSelected(presetId, monitorIndex, zoneIndex) {
         if (zoneIndex === -1) {
             this.clearAll();
             return;
         }
 
         // Snap window and clear highlights
-        if (this._dragDetector._draggedWindow) {
+        const sel = this._dragDetector.selectedZone;
+        if (this._dragDetector._draggedWindow && sel?.rect) {
             this._windowTracker.snapWindow(
                 this._dragDetector._draggedWindow,
                 presetId,
                 zoneIndex,
-                rect
+                sel.rect
             );
 
             // Scale snap feedback on window actor
