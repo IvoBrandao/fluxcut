@@ -660,6 +660,12 @@ class FluxCutController {
 
     openZoneEditor() {
         if (!this._zoneEditor) return;
+        // If the editor is already open, the same shortcut commits (saves)
+        // the drawn layout instead of toggling it closed.
+        if (this._zoneEditor.isOpen()) {
+            this._zoneEditor.save();
+            return;
+        }
         const monitorIndex = global.display.get_focus_window()?.get_monitor()
             ?? global.display.get_current_monitor();
         this._zoneEditor.open(monitorIndex);

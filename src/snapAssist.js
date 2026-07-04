@@ -27,6 +27,7 @@ export class SnapAssist {
         /** @type {St.BoxLayout[]} */
         this._overlays = [];
         this._dismissTimerId = null;
+        this._focusSignalId = null;
     }
 
     // ------------------------------------------------------------------ public
@@ -54,10 +55,25 @@ export class SnapAssist {
         }
 
         this._startDismissTimer();
+
+        // Close the remaining-zone previews as soon as the user commits to a
+        // window: focusing/activating any window (via click or Enter) dismisses
+        // all the other overlays. Guard against re-entrancy from our own snap.
+        if (this._focusSignalId === null) {
+            this._focusSignalId = global.display.connect(
+                "notify::focus-window",
+                () => this.destroyAll()
+            );
+        }
     }
 
     destroyAll() {
         this._stopDismissTimer();
+
+        if (this._focusSignalId !== null) {
+            global.display.disconnect(this._focusSignalId);
+            this._focusSignalId = null;
+        }
         for (const overlay of this._overlays) {
             if (Main.uiGroup.contains(overlay)) {
                 this._animations.fadeOut(overlay, undefined, () => {
@@ -146,21 +162,25 @@ export class SnapAssist {
 
         // Try Clutter.Clone of window actor
         const winActor = metaWindow.get_compositor_private();
-        if (winActor) {
+        const sw = winActor?.width  ?? 0;
+        const sh = winActor?.height ?? 0;
+        if (winActor && sw > 0 && sh > 0) {
             try {
-                const clone = new Clutter.Clone({ source: winActor });
-                const scale = Math.min(
-                    (THUMB_W - 8) / (winActor.width || 1),
-                    (THUMB_H - 8) / (winActor.height || 1)
-                );
-                clone.set_scale(scale, scale);
-                clone.width  = Math.round((winActor.width  || THUMB_W) * scale);
-                clone.height = Math.round((winActor.height || THUMB_H) * scale);
+                // Clutter.Clone scales its source to fit its own allocation, so
+                // we only set the target width/height — NOT set_scale as well,
+                // which would compound the transform and shrink it to nothing.
+                const scale = Math.min((THUMB_W - 8) / sw, (THUMB_H - 8) / sh);
+                const clone = new Clutter.Clone({
+                    source: winActor,
+                    width:  Math.max(Math.round(sw * scale), 1),
+                    height: Math.max(Math.round(sh * scale), 1),
+                });
                 inner.add_child(clone);
             } catch (_) {
                 inner.add_child(this._buildFallbackThumb(metaWindow));
             }
         } else {
+            // No mapped compositor actor (minimized/other workspace) — icon only.
             inner.add_child(this._buildFallbackThumb(metaWindow));
         }
 

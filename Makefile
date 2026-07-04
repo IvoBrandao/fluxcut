@@ -4,9 +4,38 @@ SCHEMA_DIR     = schemas
 PO_DIR         = po
 LOCALES        = es fr de it pt
 
-.PHONY: all schemas po build install enable disable uninstall dev dist clean test lint typecheck
+.PHONY: all schemas po build install enable disable uninstall dev dist clean test lint typecheck setup-tools
 
 all: schemas po
+
+# ── Install build/test toolchain (Ubuntu/Debian & CachyOS/Arch) ──────────────
+# Installs everything needed to build, install and test the extension:
+#   glib-compile-schemas (schemas), msgfmt/xgettext (translations),
+#   gnome-extensions (enable/disable), zip (dist), make, node/npm (tests).
+setup-tools:
+	@if command -v apt-get >/dev/null 2>&1; then \
+		echo "→ Detected Ubuntu/Debian (apt)"; \
+		sudo apt-get update && \
+		sudo apt-get install -y \
+			make git zip \
+			libglib2.0-bin gettext \
+			gnome-shell-extensions \
+			nodejs npm; \
+	elif command -v pacman >/dev/null 2>&1; then \
+		echo "→ Detected CachyOS/Arch (pacman)"; \
+		sudo pacman -Sy --needed --noconfirm \
+			make git zip \
+			glib2 gettext \
+			gnome-shell \
+			nodejs npm; \
+	else \
+		echo "Unsupported distro: install these manually →"; \
+		echo "  glib2 (glib-compile-schemas), gettext, gnome-shell,"; \
+		echo "  zip, make, git, nodejs, npm"; \
+		exit 1; \
+	fi
+	@echo "✓ Toolchain ready. Next: 'make node_modules' then 'make test'."
+
 
 # ── Compile GSettings schemas ────────────────────────────────────────────────
 schemas:
@@ -45,6 +74,14 @@ install: build
 	@mkdir -p $(INSTALL_DIR)
 	@cp -r build/$(EXTENSION_UUID)/. $(INSTALL_DIR)/
 	@echo "Installed to $(INSTALL_DIR)"
+	@echo ""
+	@echo "GNOME Shell only detects new extensions after a reload:"
+	@if [ "$$XDG_SESSION_TYPE" = "wayland" ]; then \
+		echo "  Wayland session → log out and back in, then: make enable"; \
+	else \
+		echo "  X11 session → press Alt+F2, type 'r', Enter (or: killall -3 gnome-shell)"; \
+		echo "  then: make enable"; \
+	fi
 
 enable:
 	gnome-extensions enable $(EXTENSION_UUID)

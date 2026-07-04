@@ -87,7 +87,7 @@ export class ZoneEditor {
             text: _("Click and drag to draw zones\n" +
                      "Drag corner/edge handles to resize\n" +
                      "Middle-click a zone to delete it\n" +
-                     "Press Escape to cancel"),
+                     "Press Enter to save · Escape to cancel"),
             style_class: "fluxcut-editor-instructions",
         });
         this._instructionLabel.set_position(
@@ -131,6 +131,13 @@ export class ZoneEditor {
                 const sym = event.get_key_symbol();
                 if (sym === 0xFF1B /* Escape */) {
                     this.close();
+                    return Clutter.EVENT_STOP;
+                }
+                // Enter / Return / Keypad-Enter → commit (save) the layout.
+                // Ignored while typing in the name entry (it keeps key focus).
+                if ((sym === 0xFF0D /* Return */ || sym === 0xFF8D /* KP_Enter */) &&
+                    !this._nameEntry?.contains?.(global.stage.get_key_focus())) {
+                    this._saveZones();
                     return Clutter.EVENT_STOP;
                 }
             }
@@ -183,6 +190,16 @@ export class ZoneEditor {
 
     destroy() {
         this.close();
+    }
+
+    /** @returns {boolean} whether the editor is currently open. */
+    isOpen() {
+        return !!this._backdrop;
+    }
+
+    /** Public save entry point (used by the open-zone-editor shortcut). */
+    save() {
+        this._saveZones();
     }
 
     // ------------------------------------------------------------------ private — toolbar
