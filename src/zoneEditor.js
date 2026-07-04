@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/zoneEditor.js
+ * WindowTilingControl — src/zoneEditor.js
  * Full-screen visual zone editor (FancyZones-style).
  *
  * NOTE: gi://Clutter is retained here solely for Clutter.ActorAlign — Mutter's
@@ -66,7 +66,7 @@ export class ZoneEditor {
 
         // Dark backdrop covering the entire monitor
         this._backdrop = new St.Widget({
-            style_class: "fluxcut-editor-backdrop",
+            style_class: "wtc-editor-backdrop",
             reactive: true,
             can_focus: true,
         });
@@ -88,7 +88,7 @@ export class ZoneEditor {
                      "Drag corner/edge handles to resize\n" +
                      "Middle-click a zone to delete it\n" +
                      "Press Enter to save · Escape to cancel"),
-            style_class: "fluxcut-editor-instructions",
+            style_class: "wtc-editor-instructions",
         });
         this._instructionLabel.set_position(
             Math.round(geom.width / 2 - 200),
@@ -206,7 +206,7 @@ export class ZoneEditor {
 
     _buildToolbar() {
         const toolbar = new St.BoxLayout({
-            style_class: "fluxcut-editor-toolbar",
+            style_class: "wtc-editor-toolbar",
             vertical: false,
         });
 
@@ -216,7 +216,7 @@ export class ZoneEditor {
             text: this._editingSetId
                 ? (this._customZones.getById(this._editingSetId)?.label ?? "")
                 : "",
-            style_class: "fluxcut-editor-status",
+            style_class: "wtc-editor-status",
             x_expand: true,
         });
         toolbar.add_child(this._nameEntry);
@@ -224,7 +224,7 @@ export class ZoneEditor {
         // Zone count label
         this._statusLabel = new St.Label({
             text: _("0 zones"),
-            style_class: "fluxcut-editor-status",
+            style_class: "wtc-editor-status",
             y_align: Clutter.ActorAlign.CENTER,
         });
         toolbar.add_child(this._statusLabel);
@@ -232,7 +232,7 @@ export class ZoneEditor {
         // Reset button
         const resetBtn = new St.Button({
             label: _("Reset to Default"),
-            style_class: "fluxcut-editor-btn",
+            style_class: "wtc-editor-btn",
         });
         resetBtn.connect("clicked", () => this._resetZones());
         toolbar.add_child(resetBtn);
@@ -240,7 +240,7 @@ export class ZoneEditor {
         // Cancel button
         const cancelBtn = new St.Button({
             label: _("Cancel"),
-            style_class: "fluxcut-editor-btn",
+            style_class: "wtc-editor-btn",
         });
         cancelBtn.connect("clicked", () => this.close());
         toolbar.add_child(cancelBtn);
@@ -248,7 +248,7 @@ export class ZoneEditor {
         // Save button
         const saveBtn = new St.Button({
             label: _("Save"),
-            style_class: "fluxcut-editor-btn fluxcut-editor-btn-primary",
+            style_class: "wtc-editor-btn wtc-editor-btn-primary",
         });
         saveBtn.connect("clicked", () => this._saveZones());
         toolbar.add_child(saveBtn);
@@ -260,7 +260,7 @@ export class ZoneEditor {
 
     _addZoneActor(normRect) {
         const geom = global.display.get_monitor_geometry(this._monitorIndex);
-        const actor = new St.Bin({ style_class: "fluxcut-editor-zone", reactive: true });
+        const actor = new St.Bin({ style_class: "wtc-editor-zone", reactive: true });
 
         this._updateActorFromNorm(actor, normRect, geom);
         this._canvas.add_child(actor);
@@ -286,7 +286,7 @@ export class ZoneEditor {
 
         return edges.map(edge => {
             const h = new St.Bin({
-                style_class: "fluxcut-editor-handle",
+                style_class: "wtc-editor-handle",
                 reactive: true,
                 width: HANDLE_SIZE,
                 height: HANDLE_SIZE,
@@ -297,8 +297,8 @@ export class ZoneEditor {
             h.set_position(ax, ay);
 
             // Drag to resize — handled via canvas captured event
-            h._fluxcutEdge = edge.name;
-            h._fluxcutZoneActor = actor;
+            h._wtcEdge = edge.name;
+            h._wtcZoneActor = actor;
 
             return h;
         });
@@ -378,12 +378,12 @@ export class ZoneEditor {
         // was removed in GNOME 47+)
         const handle = this._findHandleAt(lx, ly);
         if (handle) {
-            const targetActor = handle._fluxcutZoneActor;
+            const targetActor = handle._wtcZoneActor;
             const zone = this._zones.find(z => z.actor === targetActor);
             if (zone) {
                 this._draggingHandle = {
                     zone,
-                    edge: handle._fluxcutEdge,
+                    edge: handle._wtcEdge,
                     startX: lx,
                     startY: ly,
                     origRect: { ...zone.normRect },
@@ -396,7 +396,7 @@ export class ZoneEditor {
         this._drawing = true;
         this._drawStart = { x: lx, y: ly };
 
-        this._rubberband = new St.Bin({ style_class: "fluxcut-editor-rubberband" });
+        this._rubberband = new St.Bin({ style_class: "wtc-editor-rubberband" });
         this._rubberband.set_position(lx, ly);
         this._rubberband.set_size(1, 1);
         this._canvas.add_child(this._rubberband);
@@ -575,7 +575,7 @@ export class ZoneEditor {
             this._log?.warn("ZoneEditor: cannot save with 0 zones");
             if (this._statusLabel) {
                 this._statusLabel.text = _("Draw at least one zone before saving");
-                this._statusLabel.add_style_class_name?.("fluxcut-editor-error");
+                this._statusLabel.add_style_class_name?.("wtc-editor-error");
             }
             // Re-show instructions
             if (this._instructionLabel)

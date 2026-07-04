@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/layoutPresets.js
+ * Window Tiling Control — src/layoutPresets.js
  * 8 built-in zone presets defined as normalized {x, y, w, h} rectangles (0.0-1.0).
  *
  * minAspectRatio: preset is only offered when monitor w/h >= this value.

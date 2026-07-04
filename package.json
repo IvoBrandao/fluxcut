@@ -1,7 +1,7 @@
 {
-  "name": "fluxcut",
+  "name": "window-tiling-control",
   "version": "1.0.0",
-  "description": "FluxCut — Window Snap Zones for GNOME Shell",
+  "description": "WindowTilingControl — Window Snap Zones for GNOME Shell",
   "private": true,
   "type": "module",
   "scripts": {

@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/maximizeHook.js
+ * Window Tiling Control — src/maximizeHook.js
  * Feature: "Hovering the maximize button shows snap layouts"
  *
  * GNOME Shell 45-49 does not expose a pre-maximize hook, so this module

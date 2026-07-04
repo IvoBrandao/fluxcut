@@ -1,7 +1,7 @@
 /**
  * tests/controller.test.js
  *
- * Tests for extension.js FluxCutController — keybinding handler dispatch,
+ * Tests for extension.js WindowTilingControlController — keybinding handler dispatch,
  * null-safety guards during deferred init, quarter-tiling context-awareness,
  * move/swap navigation, and disable teardown.
  *
@@ -18,7 +18,7 @@ import { classifySlot, resolveMove } from "../src/directionalMove.js";
 // ── Controller Shim ──────────────────────────────────────────────────────────
 // We test the snap routing logic in isolation. The directional handlers
 // delegate to the REAL geometry-based model (src/directionalMove.js), exactly
-// as FluxCutController does, so this exercises production code paths.
+// as WindowTilingControlController does, so this exercises production code paths.
 
 const WORKAREA = { x: 0, y: 0, width: 1920, height: 1080 };
 

@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/i18n.js
+ * Window Tiling Control — src/i18n.js
  * Lightweight gettext wrapper.
  * Call setExtensionObject(ext) once in extension.js enable().
  */

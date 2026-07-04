@@ -1,7 +1,7 @@
 /**
  * tests/helpers/gnome-globals.js
  *
- * Sets up the subset of the GNOME Shell `global` object that FluxCut's
+ * Sets up the subset of the GNOME Shell `global` object that Window Tiling Control's
  * pure-logic modules reference.  Import this at the top of any test file
  * that exercises code touching `global.*`.
  */

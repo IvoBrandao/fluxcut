@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/compat.js
+ * Window Tiling Control — src/compat.js
  * GNOME Shell version compatibility shim (45–50+).
  *
  * API changes across versions:

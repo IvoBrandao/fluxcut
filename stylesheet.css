@@ -1,5 +1,5 @@
 /**
- * FluxCut — stylesheet.css
+ * WindowTilingControl — stylesheet.css
  * All visual styles for St-based overlays.
  * Colors are also set programmatically from GSettings but CSS provides
  * structural sizing, border-radius, and default fallbacks.
@@ -9,13 +9,13 @@
    Zone Highlights (zoneHighlight.js)
    ============================================================ */
 
-.fluxcut-zone-inactive {
+.wtc-zone-inactive {
     background-color: rgba(0, 120, 212, 0.30);
         border: 3px solid rgba(0, 120, 212, 0.80);
         border-radius: 8px;
 }
 
-.fluxcut-zone-active {
+.wtc-zone-active {
     background-color: rgba(0, 120, 212, 0.50);
         border: 4px solid rgba(0, 120, 212, 1.0);
         border-radius: 8px;
@@ -25,7 +25,7 @@
    Snap Overlay — Super+Z popup (snapOverlay.js)
    ============================================================ */
 
-.fluxcut-snap-overlay {
+.wtc-snap-overlay {
     background-color: rgba(28, 28, 28, 0.94);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 12px;
@@ -33,11 +33,11 @@
     spacing: 8px;
 }
 
-.fluxcut-preset-row {
+.wtc-preset-row {
     spacing: 8px;
 }
 
-.fluxcut-preset-button {
+.wtc-preset-button {
     background-color: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 8px;
@@ -46,31 +46,31 @@
     min-height: 48px;
 }
 
-.fluxcut-preset-button:hover {
+.wtc-preset-button:hover {
     background-color: rgba(0, 120, 212, 0.35);
     border-color: rgba(0, 120, 212, 0.80);
 }
 
-.fluxcut-preset-button:focus {
+.wtc-preset-button:focus {
     background-color: rgba(0, 120, 212, 0.50);
     border-color: rgba(0, 120, 212, 1.0);
 }
 
-.fluxcut-preset-label {
+.wtc-preset-label {
     color: rgba(255, 255, 255, 0.70);
     font-size: 10px;
     text-align: center;
 }
 
 /* Mini zone-block diagrams inside each preset button */
-.fluxcut-zone-block {
+.wtc-zone-block {
     background-color: rgba(180, 180, 180, 0.30);
     border: 1px solid rgba(255, 255, 255, 0.20);
     border-radius: 2px;
     margin: 1px;
 }
 
-.fluxcut-zone-block-primary {
+.wtc-zone-block-primary {
     background-color: rgba(0, 120, 212, 0.55);
     border-color: rgba(0, 120, 212, 0.90);
 }
@@ -79,7 +79,7 @@
    Snap Assist (snapAssist.js)
    ============================================================ */
 
-.fluxcut-snap-assist {
+.wtc-snap-assist {
     background-color: rgba(28, 28, 28, 0.90);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 10px;
@@ -88,30 +88,30 @@
     min-width: 140px;
 }
 
-.fluxcut-snap-assist-title {
+.wtc-snap-assist-title {
     color: rgba(255, 255, 255, 0.55);
     font-size: 10px;
     text-align: center;
 }
 
-.fluxcut-snap-assist-thumb {
+.wtc-snap-assist-thumb {
     background-color: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 6px;
     padding: 4px;
 }
 
-.fluxcut-snap-assist-thumb:hover {
+.wtc-snap-assist-thumb:hover {
     background-color: rgba(0, 120, 212, 0.35);
     border-color: rgba(0, 120, 212, 0.80);
 }
 
-.fluxcut-snap-assist-label {
+.wtc-snap-assist-label {
     color: rgba(255, 255, 255, 0.80);
     font-size: 10px;
 }
 
-.fluxcut-snap-assist-overflow {
+.wtc-snap-assist-overflow {
     color: rgba(255, 255, 255, 0.45);
     font-size: 10px;
     text-align: center;
@@ -121,47 +121,47 @@
    Zone Editor (zoneEditor.js)
    ============================================================ */
 
-.fluxcut-editor-backdrop {
+.wtc-editor-backdrop {
     background-color: rgba(0, 0, 0, 0.62);
 }
 
-.fluxcut-editor-zone {
+.wtc-editor-zone {
     background-color: rgba(0, 120, 212, 0.12);
     border: 2px dashed rgba(0, 120, 212, 0.65);
     border-radius: 4px;
 }
 
-.fluxcut-editor-zone:hover {
+.wtc-editor-zone:hover {
     background-color: rgba(0, 120, 212, 0.22);
     border-color: rgba(0, 120, 212, 0.90);
 }
 
-.fluxcut-editor-zone-selected {
+.wtc-editor-zone-selected {
     background-color: rgba(0, 120, 212, 0.28);
     border: 2px solid rgba(0, 120, 212, 1.0);
 }
 
-.fluxcut-editor-handle {
+.wtc-editor-handle {
     background-color: rgba(0, 120, 212, 1.0);
     border-radius: 3px;
     width: 10px;
     height: 10px;
 }
 
-.fluxcut-editor-rubberband {
+.wtc-editor-rubberband {
     background-color: rgba(0, 120, 212, 0.18);
     border: 2px dashed rgba(0, 120, 212, 0.80);
     border-radius: 3px;
 }
 
-.fluxcut-editor-toolbar {
+.wtc-editor-toolbar {
     background-color: rgba(22, 22, 22, 0.96);
     border-top: 1px solid rgba(255, 255, 255, 0.12);
     padding: 10px 16px;
     spacing: 10px;
 }
 
-.fluxcut-editor-btn {
+.wtc-editor-btn {
     background-color: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 6px;
@@ -169,25 +169,25 @@
     color: rgba(255, 255, 255, 0.90);
 }
 
-.fluxcut-editor-btn:hover {
+.wtc-editor-btn:hover {
     background-color: rgba(255, 255, 255, 0.14);
 }
 
-.fluxcut-editor-btn-primary {
+.wtc-editor-btn-primary {
     background-color: rgba(0, 120, 212, 0.80);
     border-color: rgba(0, 120, 212, 1.0);
 }
 
-.fluxcut-editor-btn-primary:hover {
+.wtc-editor-btn-primary:hover {
     background-color: rgba(0, 120, 212, 1.0);
 }
 
-.fluxcut-editor-status {
+.wtc-editor-status {
     color: rgba(255, 255, 255, 0.55);
     font-size: 11px;
 }
 
-.fluxcut-editor-instructions {
+.wtc-editor-instructions {
     color: rgba(255, 255, 255, 0.75);
     font-size: 16px;
     text-align: center;
@@ -196,19 +196,19 @@
     padding: 20px 32px;
 }
 
-.fluxcut-editor-error {
+.wtc-editor-error {
     color: rgba(255, 100, 100, 1.0);
 }
 /* ============================================================
    Snap Groups Panel Button & Popup (snapGroups.js)
    ============================================================ */
 
-.fluxcut-groups-button {
+.wtc-groups-button {
     padding: 4px 8px;
     border-radius: 6px;
 }
 
-.fluxcut-groups-popup {
+.wtc-groups-popup {
     background-color: rgba(28, 28, 28, 0.94);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 10px;
@@ -217,7 +217,7 @@
     spacing: 4px;
 }
 
-.fluxcut-group-row {
+.wtc-group-row {
     background-color: rgba(255, 255, 255, 0.04);
     border: 1px solid transparent;
     border-radius: 6px;
@@ -225,16 +225,16 @@
     spacing: 8px;
 }
 
-.fluxcut-group-row:hover {
+.wtc-group-row:hover {
     background-color: rgba(0, 120, 212, 0.30);
     border-color: rgba(0, 120, 212, 0.60);
 }
 
-.fluxcut-group-icon {
+.wtc-group-icon {
     /* intentionally empty — app icons sized externally */
 }
 
-.fluxcut-group-label {
+.wtc-group-label {
     color: rgba(255, 255, 255, 0.80);
     font-size: 11px;
 }

@@ -222,7 +222,7 @@ let wm = {};
 let extensionManager = {};
 let uiGroup = {};
 
-globalThis.__fluxcutMainSet__ = function _setMain(prop, value) {
+globalThis.__wtcMainSet__ = function _setMain(prop, value) {
     switch (prop) {
         case "panel": panel = value; break;
         case "overview": overview = value; break;
@@ -271,7 +271,7 @@ const RESOURCE_STUBS = new Map([
 
 // ── Node.js ESM loader hooks ─────────────────────────────────────────────────
 
-const STUB_SCHEME = "node:fluxcut-stub:";
+const STUB_SCHEME = "node:wtc-stub:";
 
 /**
  * Serialize a stub value into embeddable ES module source code.

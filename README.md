@@ -1,4 +1,4 @@
-# FluxCut — Window Tiling Control for GNOME
+# WindowTilingControl — Window Tiling Control for GNOME
 
 A GNOME Shell extension (45–49) that brings window snap zones to the Linux desktop.
 Drag windows to screen edges, use i3-inspired keyboard shortcuts, or draw your own custom zone layouts.
@@ -20,8 +20,8 @@ Drag windows to screen edges, use i3-inspired keyboard shortcuts, or draw your o
 ### From Source
 
 ```bash
-git clone https://github.com/IvoBrandao/fluxcut.git
-cd fluxcut
+git clone https://github.com/IvoBrandao/window-tiling-control.git
+cd window-tiling-control
 make install
 ```
 
@@ -33,7 +33,7 @@ Then restart GNOME Shell:
 Enable the extension:
 
 ```bash
-gnome-extensions enable fluxcut@gnome-tiling
+gnome-extensions enable window-tiling-control@gnome-tiling
 ```
 
 ### Dependencies
@@ -120,7 +120,7 @@ Open the extension preferences from GNOME Extensions or the Quick Settings menu.
 ### Project Structure
 
 ```
-extension.js          Main extension entry point (FluxCutController)
+extension.js          Main extension entry point (WindowTilingControlController)
 prefs.js              Adw-based preferences UI (5 pages)
 metadata.json         Extension metadata
 stylesheet.css        CSS for all overlays and highlights
@@ -168,7 +168,7 @@ make clean      # Remove build artifacts
 
 ## Compatibility
 
-FluxCut handles GNOME API changes across versions automatically:
+WindowTilingControl handles GNOME API changes across versions automatically:
 
 | API Change | GNOME Version | Handled In |
 |---|---|---|
@@ -190,7 +190,7 @@ To add a new translation:
 make pot
 
 # Copy template and translate
-cp po/fluxcut.pot po/XX.po
+cp po/window-tiling-control.pot po/XX.po
 # Edit po/XX.po with your translations
 
 # Add the locale code to Makefile LOCALES variable

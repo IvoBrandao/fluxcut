@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/multiMonitor.js
+ * Window Tiling Control — src/multiMonitor.js
  * Per-monitor state management, aspect-ratio detection, and cross-monitor
  * window moves. Supports horizontal, vertical, and mixed monitor arrangements.
  */

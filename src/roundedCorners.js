@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/roundedCorners.js
+ * WindowTilingControl — src/roundedCorners.js
  * Applies rounded corners to all normal windows by adding a Clutter effect
  * that clips the window actor's texture with a rounded rectangle.
  *
@@ -16,7 +16,7 @@ import Clutter from "gi://Clutter";
  * Uses the Clutter.OffscreenEffect pipeline to clip each window frame to a
  * rounded rectangle via a GLSL fragment shader.
  */
-const EFFECT_NAME = "fluxcut-rounded-corners";
+const EFFECT_NAME = "wtc-rounded-corners";
 
 const ROUNDED_CORNERS_GLSL = `
 uniform float radius;
@@ -171,10 +171,10 @@ export class RoundedCorners {
         this._applyToActor(actor);
 
         // Watch for maximize/unmaximize to toggle the effect
-        if (!actor._fluxcutRCSignals) {
-            actor._fluxcutRCSignals = [];
+        if (!actor._wtcRCSignals) {
+            actor._wtcRCSignals = [];
             try {
-                actor._fluxcutRCSignals.push(
+                actor._wtcRCSignals.push(
                     metaWindow.connect("notify::maximized-horizontally", () => {
                         this._onWindowStateChanged(metaWindow);
                     }),
@@ -188,7 +188,7 @@ export class RoundedCorners {
 
             // Also watch size changes to update the effect dimensions
             try {
-                actor._fluxcutRCSignals.push(
+                actor._wtcRCSignals.push(
                     metaWindow.connect("size-changed", () => {
                         if (this._settings.roundedCornersEnabled)
                             this._applyToActor(actor);
@@ -197,11 +197,11 @@ export class RoundedCorners {
             } catch (_) {}
 
             actor.connect("destroy", () => {
-                if (actor._fluxcutRCSignals) {
-                    for (const id of actor._fluxcutRCSignals) {
+                if (actor._wtcRCSignals) {
+                    for (const id of actor._wtcRCSignals) {
                         try { metaWindow.disconnect(id); } catch (_) {}
                     }
-                    actor._fluxcutRCSignals = null;
+                    actor._wtcRCSignals = null;
                 }
             });
         }

@@ -1,8 +1,8 @@
 /**
- * FluxCut — src/indicator.js
+ * WindowTilingControl — src/indicator.js
  * Quick Settings SystemIndicator + QuickMenuToggle for GNOME 43+.
  *
- * Adds a "FluxCut" entry to the Quick Settings panel with:
+ * Adds a "WindowTilingControl" entry to the Quick Settings panel with:
  *   - Enable/disable master toggle
  *   - Sub-switches for Snap Overlay, Snap Assist, Zone Highlights, Snap Groups
  *   - "Edit Zones…" action row that opens the Zone Editor
@@ -23,8 +23,8 @@ import { _ } from "./i18n.js";
 
 // ── Toggle (main button in Quick Settings grid) ──────────────────────────────
 
-const FluxCutToggle = GObject.registerClass(
-    class FluxCutToggle extends QuickSettings.QuickMenuToggle {
+const WindowTilingControlToggle = GObject.registerClass(
+    class WindowTilingControlToggle extends QuickSettings.QuickMenuToggle {
         _init(settings, controller) {
             super._init({
                 title: "Window Tiling Control",
@@ -37,7 +37,7 @@ const FluxCutToggle = GObject.registerClass(
 
             // Bind master enable setting
             settings.raw.bind(
-                "fluxcut-enabled",
+                "tiling-enabled",
                 this,
                 "checked",
                 Gio.SettingsBindFlags.DEFAULT
@@ -86,7 +86,7 @@ const FluxCutToggle = GObject.registerClass(
                 this.menu.close();
                 try {
                     Main.extensionManager.openExtensionPrefs(
-                        "fluxcut@gnome-tiling",
+                        "window-tiling-control@gnome-tiling",
                         "",
                         {}
                     );
@@ -99,23 +99,23 @@ const FluxCutToggle = GObject.registerClass(
 
 // ── SystemIndicator wrapper ───────────────────────────────────────────────────
 
-const FluxCutIndicator = GObject.registerClass(
-    class FluxCutIndicator extends QuickSettings.SystemIndicator {
+const WindowTilingControlIndicator = GObject.registerClass(
+    class WindowTilingControlIndicator extends QuickSettings.SystemIndicator {
         _init(settings, controller) {
             super._init();
 
             this._indicator = this._addIndicator();
             this._indicator.iconName = "view-grid-symbolic";
 
-            // Only show indicator dot when FluxCut is enabled
+            // Only show indicator dot when WindowTilingControl is enabled
             settings.raw.bind(
-                "fluxcut-enabled",
+                "tiling-enabled",
                 this._indicator,
                 "visible",
                 Gio.SettingsBindFlags.GET
             );
 
-            this._toggle = new FluxCutToggle(settings, controller);
+            this._toggle = new WindowTilingControlToggle(settings, controller);
             this.quickSettingsItems.push(this._toggle);
         }
 
@@ -140,7 +140,7 @@ export class Indicator {
     }
 
     enable() {
-        this._indicator = new FluxCutIndicator(this._settings, this._controller);
+        this._indicator = new WindowTilingControlIndicator(this._settings, this._controller);
 
         Main.panel.statusArea.quickSettings.addExternalIndicator(
             this._indicator

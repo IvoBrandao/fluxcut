@@ -1,9 +1,9 @@
-# FluxCut German Translation
-# Copyright (C) 2026 FluxCut Contributors
+# Window Tiling Control German Translation
+# Copyright (C) 2026 Window Tiling Control Contributors
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: FluxCut 1\n"
+"Project-Id-Version: Window Tiling Control 1\n"
 "PO-Revision-Date: 2026-04-04 00:00+0000\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
@@ -11,14 +11,14 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "FluxCut"
-msgstr "FluxCut"
+msgid "Window Tiling Control"
+msgstr "Window Tiling Control"
 
 msgid "Window snap zones for GNOME"
 msgstr "Windows-11-artige Einrastzonen für GNOME"
 
-msgid "Enable FluxCut"
-msgstr "FluxCut aktivieren"
+msgid "Enable Window Tiling Control"
+msgstr "Window Tiling Control aktivieren"
 
 msgid "Snap Zones"
 msgstr "Einrastzonen"

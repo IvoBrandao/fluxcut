@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/customZones.js
+ * Window Tiling Control — src/customZones.js
  * Stores and retrieves user-defined zone sets from GSettings.
  *
  * Each ZoneSet: { id: string, label: string, zones: NormRect[] }

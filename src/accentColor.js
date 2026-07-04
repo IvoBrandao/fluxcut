@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/accentColor.js
+ * Window Tiling Control — src/accentColor.js
  * Reads the GNOME desktop accent color (GNOME 47+) and exposes it as RGBA
  * strings for our overlays. Falls back to a blue accent on older GNOME or
  * when the key is unavailable.

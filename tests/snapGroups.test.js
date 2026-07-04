@@ -61,14 +61,14 @@ describe("SnapGroupsManager", () => {
     beforeEach(() => {
         const { display } = setupGnomeGlobals();
 
-        globalThis.__fluxcutMainSet__("uiGroup", {
+        globalThis.__wtcMainSet__("uiGroup", {
             _children: [],
             add_child: function (c) { this._children.push(c); },
             remove_child: function (c) { this._children = this._children.filter(x => x !== c); },
             contains: function (c) { return this._children.includes(c); },
         });
 
-        globalThis.__fluxcutMainSet__("panel", {
+        globalThis.__wtcMainSet__("panel", {
             _rightBox: {
                 _children: [],
                 insert_child_at_index: function (child, idx) { this._children.splice(idx, 0, child); },

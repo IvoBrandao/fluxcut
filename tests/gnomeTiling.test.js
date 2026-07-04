@@ -4,7 +4,7 @@
  * Tests for _overrideGnomeTiling / _restoreGnomeTiling logic in extension.js.
  * Verifies that GNOME's active screen edges (edge-tiling) and native
  * keybindings are saved, overridden, and restored correctly — including
- * the soft-disable path via the fluxcut-enabled settings toggle.
+ * the soft-disable path via the tiling-enabled settings toggle.
  */
 
 import { describe, it, beforeEach } from "node:test";
@@ -228,12 +228,12 @@ describe("GNOME tiling override / restore", () => {
             shim._overrideGnomeTiling();
             assert.equal(schemas.mutter.get_boolean("edge-tiling"), false);
 
-            // User toggles fluxcut-enabled OFF → restore
+            // User toggles tiling-enabled OFF → restore
             shim._restoreGnomeTiling();
             assert.equal(schemas.mutter.get_boolean("edge-tiling"), true,
                 "edge-tiling must be true after soft-disable");
 
-            // User toggles fluxcut-enabled ON → re-override
+            // User toggles tiling-enabled ON → re-override
             shim._overrideGnomeTiling();
             assert.equal(schemas.mutter.get_boolean("edge-tiling"), false);
 

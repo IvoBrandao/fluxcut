@@ -14,7 +14,7 @@ import { Keybindings } from "../src/keybindings.js";
 // ── Stubs ─────────────────────────────────────────────────────────────────────
 
 function makeSettings() {
-    return { kbSettings: { _schema: "org.gnome.shell.extensions.fluxcut.keybindings" } };
+    return { kbSettings: { _schema: "org.gnome.shell.extensions.window-tiling-control.keybindings" } };
 }
 
 function makeLogger() {
@@ -57,7 +57,7 @@ describe("Keybindings", () => {
         addedBindings = [];
         removedBindings = [];
         // Replace Main.wm with tracking mock
-        globalThis.__fluxcutMainSet__("wm", {
+        globalThis.__wtcMainSet__("wm", {
             addKeybinding: (name, settings, flags, mode, handler) => {
                 addedBindings.push({ name, settings, flags, mode, handler });
             },
@@ -221,7 +221,7 @@ describe("Keybindings", () => {
 
     it("survives addKeybinding failure for individual bindings", () => {
         let failCount = 0;
-        globalThis.__fluxcutMainSet__("wm", {
+        globalThis.__wtcMainSet__("wm", {
             addKeybinding: (name, ...args) => {
                 if (name === "snap-top-left") {
                     failCount++;

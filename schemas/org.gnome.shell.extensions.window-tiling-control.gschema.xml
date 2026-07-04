@@ -2,16 +2,16 @@
 <schemalist>
 
   <!-- ======================================================
-       FluxCut main settings schema
+       WindowTilingControl main settings schema
        ====================================================== -->
-  <schema id="org.gnome.shell.extensions.fluxcut"
-          path="/org/gnome/shell/extensions/fluxcut/">
+  <schema id="org.gnome.shell.extensions.window-tiling-control"
+          path="/org/gnome/shell/extensions/window-tiling-control/">
 
     <!-- Master toggle -->
-    <key name="fluxcut-enabled" type="b">
+    <key name="tiling-enabled" type="b">
       <default>true</default>
-      <summary>Enable FluxCut</summary>
-      <description>Master switch to enable or disable all FluxCut tiling features.</description>
+      <summary>Enable WindowTilingControl</summary>
+      <description>Master switch to enable or disable all WindowTilingControl tiling features.</description>
     </key>
 
     <!-- Feature toggles -->
@@ -150,10 +150,10 @@
   </schema>
 
   <!-- ======================================================
-       FluxCut keybindings schema — i3-inspired defaults
+       WindowTilingControl keybindings schema — i3-inspired defaults
        ====================================================== -->
-  <schema id="org.gnome.shell.extensions.fluxcut.keybindings"
-          path="/org/gnome/shell/extensions/fluxcut/keybindings/">
+  <schema id="org.gnome.shell.extensions.window-tiling-control.keybindings"
+          path="/org/gnome/shell/extensions/window-tiling-control/keybindings/">
 
     <!-- ── Window Tiling (Super + direction) ────────────────────────── -->
 

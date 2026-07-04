@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/zoneHighlight.js
+ * WindowTilingControl — src/zoneHighlight.js
  * Renders St.Bin overlays on global.window_group to show snap zones
  * during window drag operations and snap overlay hover previews.
  */
@@ -147,7 +147,7 @@ export class ZoneHighlighter {
             const isActive = i === activeZoneIndex;
 
             const actor = new St.Bin({
-                style_class: isActive ? "fluxcut-zone-active" : "fluxcut-zone-inactive",
+                style_class: isActive ? "wtc-zone-active" : "wtc-zone-inactive",
                 style: this._zoneStyle(isActive),
                 reactive: false,
             });
@@ -166,13 +166,13 @@ export class ZoneHighlighter {
     _updateActiveZone(activeZoneIndex) {
         for (const h of this._highlights) {
             const shouldBeActive = h.zoneIndex === activeZoneIndex;
-            const isActive = h.actor.style_class === "fluxcut-zone-active";
+            const isActive = h.actor.style_class === "wtc-zone-active";
 
             if (shouldBeActive && !isActive) {
-                h.actor.style_class = "fluxcut-zone-active";
+                h.actor.style_class = "wtc-zone-active";
                 h.actor.style = this._zoneStyle(true);
             } else if (!shouldBeActive && isActive) {
-                h.actor.style_class = "fluxcut-zone-inactive";
+                h.actor.style_class = "wtc-zone-inactive";
                 h.actor.style = this._zoneStyle(false);
             }
         }

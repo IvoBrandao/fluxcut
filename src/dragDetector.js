@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/dragDetector.js
+ * Window Tiling Control — src/dragDetector.js
  * Detects window drag operations via grab-op signals + 16ms pointer polling.
  * Emits GObject signals "zone-hovered" and "zone-selected".
  */
@@ -162,28 +162,22 @@ export const DragDetector = GObject.registerClass(
 
             const monitorIndex = this._zoneManager.getMonitorForPoint(px, py);
 
-            // Edge/corner detection takes priority over active-preset zones
+            // Windows 11-style: only reveal snap zones when the pointer is near
+            // a screen edge or corner — NOT across the whole screen the instant
+            // a drag starts. Edge/corner proximity is the sole trigger.
             const edgeZone = this._getEdgeZone(px, py, monitorIndex);
 
-            let presetId, rect, zoneIndex, isMaximize;
-
-            if (edgeZone) {
-                ({ presetId, rect, zoneIndex, isMaximize } = edgeZone);
-            } else {
-                const activePreset = this._multiMonitor.getActivePreset(monitorIndex);
-                const hit = this._zoneManager.getHoveredZone(px, py, activePreset, monitorIndex);
-                if (!hit) {
-                    if (this._lastHoveredZone) {
-                        this._lastHoveredZone = null;
-                        this.hoveredZone = null;
-                        this.emit("zone-hovered", "", monitorIndex, -1);
-                    }
-                    return;
+            if (!edgeZone) {
+                // Away from any edge — hide highlights.
+                if (this._lastHoveredZone) {
+                    this._lastHoveredZone = null;
+                    this.hoveredZone = null;
+                    this.emit("zone-hovered", "", monitorIndex, -1);
                 }
-                presetId = activePreset;
-                ({ rect, zoneIndex } = hit);
-                isMaximize = false;
+                return;
             }
+
+            const { presetId, rect, zoneIndex, isMaximize } = edgeZone;
 
             const changed = !this._lastHoveredZone ||
                 this._lastHoveredZone.zoneIndex  !== zoneIndex  ||

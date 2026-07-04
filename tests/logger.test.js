@@ -86,11 +86,11 @@ describe("Logger", () => {
         assert.equal(consoleDebug.mock.callCount(), 1);
     });
 
-    it("prefixes every log with [FluxCut]", () => {
+    it("prefixes every log with [Window Tiling Control]", () => {
         const log = makeLogger(LogLevel.INFO);
         log.info("hello");
         const args = consoleLog.mock.calls[0].arguments;
-        assert.equal(args[0], "[FluxCut]");
+        assert.equal(args[0], "[Window Tiling Control]");
         assert.equal(args[1], "hello");
     });
 

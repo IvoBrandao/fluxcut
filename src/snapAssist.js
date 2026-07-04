@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/snapAssist.js
+ * WindowTilingControl — src/snapAssist.js
  * After a window is snapped to the first zone of a multi-zone preset,
  * shows a thumbnail picker overlay on each remaining zone so the user
  * can quickly fill the layout.
@@ -93,14 +93,14 @@ export class SnapAssist {
 
     _buildOverlay(presetId, monitorIndex, workspaceIndex, zone, unsnapped) {
         const overlay = new St.BoxLayout({
-            style_class: "fluxcut-snap-assist",
+            style_class: "wtc-snap-assist",
             vertical: true,
             reactive: true,
         });
 
         const title = new St.Label({
             text: _("Snap a window here"),
-            style_class: "fluxcut-snap-assist-title",
+            style_class: "wtc-snap-assist-title",
             x_align: Clutter.ActorAlign.CENTER,
         });
         overlay.add_child(title);
@@ -110,7 +110,7 @@ export class SnapAssist {
             y_expand: true,
         });
         const thumbBox = new St.BoxLayout({
-            style_class: "fluxcut-snap-assist-thumbs",
+            style_class: "wtc-snap-assist-thumbs",
             vertical: true,
         });
 
@@ -125,7 +125,7 @@ export class SnapAssist {
         if (unsnapped.length > MAX_THUMBNAILS) {
             const overflow = new St.Label({
                 text: `+${unsnapped.length - MAX_THUMBNAILS} ${_("more")}`,
-                style_class: "fluxcut-snap-assist-overflow",
+                style_class: "wtc-snap-assist-overflow",
                 x_align: Clutter.ActorAlign.CENTER,
             });
             thumbBox.add_child(overflow);
@@ -153,7 +153,7 @@ export class SnapAssist {
 
     _buildThumbnail(metaWindow, presetId, monitorIndex, workspaceIndex, zone) {
         const btn = new St.Button({
-            style_class: "fluxcut-snap-assist-thumb",
+            style_class: "wtc-snap-assist-thumb",
             reactive: true,
             can_focus: true,
         });
@@ -210,7 +210,7 @@ export class SnapAssist {
         const title = metaWindow.get_title() ?? "";
         const label = new St.Label({
             text: title.length > 28 ? `${title.slice(0, 28)}…` : title,
-            style_class: "fluxcut-snap-assist-label",
+            style_class: "wtc-snap-assist-label",
             y_align: Clutter.ActorAlign.CENTER,
         });
         box.add_child(label);

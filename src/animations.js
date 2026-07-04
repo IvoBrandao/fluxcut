@@ -1,6 +1,6 @@
 /**
- * FluxCut — src/animations.js
- * Mutter animation helpers for all FluxCut overlays and window transitions.
+ * Window Tiling Control — src/animations.js
+ * Mutter animation helpers for all Window Tiling Control overlays and window transitions.
  *
  * NOTE: gi://Clutter is Mutter's own bundled compositor library — it is NOT
  * the deprecated standalone upstream Clutter project. It is the correct API

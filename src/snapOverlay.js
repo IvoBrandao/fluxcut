@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/snapOverlay.js
+ * WindowTilingControl — src/snapOverlay.js
  * The Super+Z snap layout picker popup.
  *
  * Appears top-center (or top-right, per settings) on the focused window's
@@ -64,7 +64,7 @@ export class SnapOverlay {
         this._currentMonitor = monitorIndex;
 
         this._widget = new St.BoxLayout({
-            style_class: "fluxcut-snap-overlay",
+            style_class: "wtc-snap-overlay",
             vertical: false,
             reactive: true,
         });
@@ -151,7 +151,7 @@ export class SnapOverlay {
 
     _buildPresetButton(preset, monitorIndex, buttonIdx) {
         const btn = new St.Button({
-            style_class: "fluxcut-preset-button",
+            style_class: "wtc-preset-button",
             can_focus: true,
             reactive: true,
         });
@@ -162,7 +162,7 @@ export class SnapOverlay {
 
         const label = new St.Label({
             text: _(preset.label),
-            style_class: "fluxcut-preset-label",
+            style_class: "wtc-preset-label",
             x_align: Clutter.ActorAlign.CENTER,
         });
         inner.add_child(label);
@@ -200,7 +200,7 @@ export class SnapOverlay {
         for (let i = 0; i < zones.length; i++) {
             const z = zones[i];
             const block = new St.Bin({
-                style_class: i === 0 ? "fluxcut-zone-block-primary" : "fluxcut-zone-block",
+                style_class: i === 0 ? "wtc-zone-block-primary" : "wtc-zone-block",
             });
             if (i === 0 && this._settings.useAccentColor) {
                 block.style =

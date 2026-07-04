@@ -1,5 +1,5 @@
 /**
- * FluxCut — Window Snap Zones for GNOME
+ * WindowTilingControl — Window Snap Zones for GNOME
  * extension.js — Main extension entry point and controller lifecycle
  *
  * GNOME Shell 45-49 compatible (ESM imports)
@@ -34,9 +34,9 @@ import { classifySlot, resolveMove } from "./src/directionalMove.js";
 
 // ---------------------------------------------------------------------------
 
-export default class FluxCutExtension extends Extension {
+export default class WindowTilingControlExtension extends Extension {
     enable() {
-        this._controller = new FluxCutController(this);
+        this._controller = new WindowTilingControlController(this);
         this._controller.enable();
     }
 
@@ -50,7 +50,7 @@ export default class FluxCutExtension extends Extension {
 
 // ---------------------------------------------------------------------------
 
-class FluxCutController {
+class WindowTilingControlController {
     constructor(extension) {
         this._ext = extension;
     }
@@ -62,7 +62,7 @@ class FluxCutController {
         setExtensionObject(this._ext);
         this._animations = new Animations(this._settings);
 
-        this._logger.info("FluxCut enabling…");
+        this._logger.info("WindowTilingControl enabling…");
 
         // Phase 2 — zone logic (lightweight)
         this._customZones = new CustomZoneStore(this._settings, this._logger);
@@ -84,7 +84,7 @@ class FluxCutController {
             try {
                 this._enableDeferred();
             } catch (e) {
-                this._logger?.error(`FluxCut deferred init failed: ${e}\n${e?.stack ?? ""}`);
+                this._logger?.error(`WindowTilingControl deferred init failed: ${e}\n${e?.stack ?? ""}`);
                 try { this.disable(); } catch (_) {}
             }
             return GLib.SOURCE_REMOVE;
@@ -172,7 +172,7 @@ class FluxCutController {
 
         // Watch master enable/disable toggle
         this._enabledSignalId = this._settings.connect(
-            "changed::fluxcut-enabled",
+            "changed::tiling-enabled",
             this._onEnabledChanged.bind(this)
         );
 
@@ -182,11 +182,11 @@ class FluxCutController {
             this._onEnabledChanged();
         }
 
-        this._logger.info("FluxCut enabled");
+        this._logger.info("WindowTilingControl enabled");
     }
 
     disable() {
-        this._logger?.info("FluxCut disabling…");
+        this._logger?.info("WindowTilingControl disabling…");
 
         // Cancel deferred init if it hasn't run yet
         if (this._deferredInitId) {
@@ -270,7 +270,7 @@ class FluxCutController {
 
     _onEnabledChanged() {
         const enabled = this._settings.enabled;
-        this._logger?.info(`FluxCut ${enabled ? "re-enabled" : "soft-disabled"} via settings`);
+        this._logger?.info(`WindowTilingControl ${enabled ? "re-enabled" : "soft-disabled"} via settings`);
 
         if (enabled) {
             this._overrideGnomeTiling();
@@ -298,7 +298,7 @@ class FluxCutController {
 
     /**
      * Disable GNOME's built-in tiling keybindings and edge-tiling so they
-     * don't conflict with FluxCut.  Saves original values for restore.
+     * don't conflict with WindowTilingControl.  Saves original values for restore.
      */
     _overrideGnomeTiling() {
         this._savedGnomeBindings = {};

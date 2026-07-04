@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/zoneManager.js
+ * Window Tiling Control — src/zoneManager.js
  * Converts normalized preset zone rects → pixel Meta.Rectangle values,
  * and applies window snap assignments.
  */

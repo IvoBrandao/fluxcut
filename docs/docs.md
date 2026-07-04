@@ -1,6 +1,6 @@
-# FluxCut — Window Tiling Control for GNOME
+# WindowTilingControl — Window Tiling Control for GNOME
 
-**FluxCut** (displayed as **Window Tiling Control** in the GNOME settings panel) is a GNOME Shell extension (45–49) that brings snap zone tiling to GNOME. It provides drag-to-edge snapping, a visual layout picker, snap groups, a custom zone editor, and full keyboard control — designed natively for the Linux desktop.
+**WindowTilingControl** (displayed as **Window Tiling Control** in the GNOME settings panel) is a GNOME Shell extension (45–49) that brings snap zone tiling to GNOME. It provides drag-to-edge snapping, a visual layout picker, snap groups, a custom zone editor, and full keyboard control — designed natively for the Linux desktop.
 
 ---
 
@@ -30,11 +30,11 @@
 
 ## Architecture Overview
 
-FluxCut uses a **layered controller pattern**. A single `FluxCutController` owns all subsystems and wires them together in a 13-phase enable sequence. Every subsystem is a self-contained class that connects to GNOME signals in `enable()` and cleans up in `disable()`.
+WindowTilingControl uses a **layered controller pattern**. A single `WindowTilingControlController` owns all subsystems and wires them together in a 13-phase enable sequence. Every subsystem is a self-contained class that connects to GNOME signals in `enable()` and cleans up in `disable()`.
 
 ```mermaid
 graph LR
-    EXT[extension.js] --> CTL[FluxCutController]
+    EXT[extension.js] --> CTL[WindowTilingControlController]
 
     CTL --> CORE["⚙ Core\nSettings · Logger · Animations\nZoneManager · CustomZoneStore\nCompat"]
     CTL --> MON["🖥 Monitors & Windows\nMultiMonitorManager\nWindowTracker"]
@@ -323,7 +323,7 @@ The `bypass(windowId)` method sets a ~500 ms exemption so `snapFocusedUp` can ma
 
 **Module:** `src/keybindings.js`
 
-All keybindings are registered via `Main.wm.addKeybinding` against the `fluxcut.keybindings` GSettings child schema. They are user-configurable in the preferences UI, organized into six groups.
+All keybindings are registered via `Main.wm.addKeybinding` against the `window-tiling-control.keybindings` GSettings child schema. They are user-configurable in the preferences UI, organized into six groups.
 
 #### Window Tiling (Super + direction)
 
@@ -380,7 +380,7 @@ Six additional `snap-to-zone-N` keys (1–6) are available but unbound by defaul
 
 #### GNOME Native Tiling Override
 
-On `enable()`, FluxCut disables conflicting GNOME native tiling:
+On `enable()`, WindowTilingControl disables conflicting GNOME native tiling:
 
 - `org.gnome.mutter` → `edge-tiling` set to `false`
 - `org.gnome.desktop.wm.keybindings` → `maximize` and `unmaximize` cleared
@@ -490,7 +490,7 @@ Provided effects: `fadeIn`, `fadeOut`, `slideIn`, `slideOut`, `easeRect` (window
 
 ```mermaid
 classDiagram
-    class FluxCutController {
+    class WindowTilingControlController {
         +enable()
         +disable()
         +snapFocusedToPreset(presetId, zoneIndex)
@@ -568,11 +568,11 @@ classDiagram
         --signal-- monitors-updated
     }
 
-    FluxCutController --> Compat
-    FluxCutController --> ZoneManager
-    FluxCutController --> WindowTracker
-    FluxCutController --> MultiMonitorManager
-    FluxCutController --> DragDetector
+    WindowTilingControlController --> Compat
+    WindowTilingControlController --> ZoneManager
+    WindowTilingControlController --> WindowTracker
+    WindowTilingControlController --> MultiMonitorManager
+    WindowTilingControlController --> DragDetector
     ZoneManager --> CustomZoneStore
     WindowTracker --> ZoneManager
     WindowTracker --> MultiMonitorManager
@@ -583,13 +583,13 @@ classDiagram
 
 ## Settings Reference
 
-All settings live under the schema `org.gnome.shell.extensions.fluxcut`.
+All settings live under the schema `org.gnome.shell.extensions.window-tiling-control`.
 
 ### Feature Toggles
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `fluxcut-enabled` | boolean | `true` | Master on/off switch |
+| `tiling-enabled` | boolean | `true` | Master on/off switch |
 | `snap-overlay-enabled` | boolean | `true` | Enable Super+Z overlay |
 | `snap-assist-enabled` | boolean | `true` | Enable Snap Assist thumbnails |
 | `drag-zone-highlight-enabled` | boolean | `true` | Highlight zones during drag |
@@ -622,7 +622,7 @@ All settings live under the schema `org.gnome.shell.extensions.fluxcut`.
 | `custom-zone-sets` | string[] | JSON-serialized custom zone layouts |
 | `monitor-presets` | string[] | JSON-serialized per-monitor/workspace preset map |
 
-### Keybindings (child schema `…fluxcut.keybindings`)
+### Keybindings (child schema `…window-tiling-control.keybindings`)
 
 | Key | Default |
 |-----|---------|
@@ -689,7 +689,7 @@ flowchart TD
 
     subgraph "Hooks Thread (Worker)"
         REG["gi.js → register(gi-loader.js)"]
-        RESOLVE["resolve hook\ngi://Meta → node:fluxcut-stub:gi%3A%2F%2FMeta"]
+        RESOLVE["resolve hook\ngi://Meta → node:wtc-stub:gi%3A%2F%2FMeta"]
         LOAD["load hook\nserializes stub object\nas self-contained ESM source"]
     end
 
@@ -720,7 +720,7 @@ flowchart TD
 | Test File | Covers | Tests |
 |-----------|--------|-------|
 | `animations.test.js` | `fadeIn`, `fadeOut`, `slideIn`, `slideOut`, speed levels | 24 |
-| `controller.test.js` | `FluxCutController` enable/disable, snap methods, navigation | 35 |
+| `controller.test.js` | `WindowTilingControlController` enable/disable, snap methods, navigation | 35 |
 | `customZones.test.js` | `CustomZoneStore` CRUD, signal emission, ID generation | 15 |
 | `dragDetector.test.js` | Edge/corner detection, threshold clamping, grab-op compat, signal params | 19 |
 | `i18n.test.js` | `_()` and `ngettext()` with/without extension object | 5 |
@@ -766,7 +766,7 @@ make install
 After `make install`, enable with:
 
 ```bash
-gnome-extensions enable fluxcut@gnome-tiling
+gnome-extensions enable window-tiling-control@gnome-tiling
 ```
 
 or toggle via GNOME Extensions app / Extensions Manager.

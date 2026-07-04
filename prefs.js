@@ -1,5 +1,5 @@
 /**
- * FluxCut — prefs.js
+ * WindowTilingControl — prefs.js
  * Extension preferences UI — Adw-based, 5 pages.
  *
  * Pages:
@@ -16,9 +16,9 @@ import Gdk from "gi://Gdk";
 import Gio from "gi://Gio";
 import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
-const UUID = "fluxcut@gnome-tiling";
-const SCHEMA_ID = "org.gnome.shell.extensions.fluxcut";
-const KB_SCHEMA_ID = "org.gnome.shell.extensions.fluxcut.keybindings";
+const UUID = "window-tiling-control@gnome-tiling";
+const SCHEMA_ID = "org.gnome.shell.extensions.window-tiling-control";
+const KB_SCHEMA_ID = "org.gnome.shell.extensions.window-tiling-control.keybindings";
 
 // ── Keybinding groups for Keybindings page (i3-inspired layout) ──────────────
 const KB_GROUPS = [
@@ -81,7 +81,7 @@ const KB_GROUPS = [
     },
 ];
 
-export default class FluxCutPreferences extends ExtensionPreferences {
+export default class WindowTilingControlPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings(SCHEMA_ID);
         const kbSettings = this.getSettings(KB_SCHEMA_ID);
@@ -107,7 +107,7 @@ export default class FluxCutPreferences extends ExtensionPreferences {
 
         // Master enable
         group.add(this._switchRow(
-            settings, "fluxcut-enabled",
+            settings, "tiling-enabled",
             "Enable Window Tiling",
             "Master switch for all window tiling features"
         ));

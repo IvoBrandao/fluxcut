@@ -124,7 +124,7 @@ describe("ZoneHighlighter", () => {
         it("all highlights have inactive style (no active zone)", () => {
             highlighter.showPreviewForPreset("quarters", 0);
             for (const h of highlighter._highlights) {
-                assert.equal(h.actor.style_class, "fluxcut-zone-inactive");
+                assert.equal(h.actor.style_class, "wtc-zone-inactive");
             }
         });
 
@@ -171,20 +171,20 @@ describe("ZoneHighlighter", () => {
             highlighter.showPreviewForPreset("quarters", 0);
             highlighter._updateActiveZone(2);
 
-            assert.equal(highlighter._highlights[2].actor.style_class, "fluxcut-zone-active");
-            assert.equal(highlighter._highlights[0].actor.style_class, "fluxcut-zone-inactive");
-            assert.equal(highlighter._highlights[1].actor.style_class, "fluxcut-zone-inactive");
-            assert.equal(highlighter._highlights[3].actor.style_class, "fluxcut-zone-inactive");
+            assert.equal(highlighter._highlights[2].actor.style_class, "wtc-zone-active");
+            assert.equal(highlighter._highlights[0].actor.style_class, "wtc-zone-inactive");
+            assert.equal(highlighter._highlights[1].actor.style_class, "wtc-zone-inactive");
+            assert.equal(highlighter._highlights[3].actor.style_class, "wtc-zone-inactive");
         });
 
         it("switching active zone updates styles correctly", () => {
             highlighter.showPreviewForPreset("quarters", 0);
             highlighter._updateActiveZone(0);
-            assert.equal(highlighter._highlights[0].actor.style_class, "fluxcut-zone-active");
+            assert.equal(highlighter._highlights[0].actor.style_class, "wtc-zone-active");
 
             highlighter._updateActiveZone(3);
-            assert.equal(highlighter._highlights[0].actor.style_class, "fluxcut-zone-inactive");
-            assert.equal(highlighter._highlights[3].actor.style_class, "fluxcut-zone-active");
+            assert.equal(highlighter._highlights[0].actor.style_class, "wtc-zone-inactive");
+            assert.equal(highlighter._highlights[3].actor.style_class, "wtc-zone-active");
         });
     });
 

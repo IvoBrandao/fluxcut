@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/windowTracker.js
+ * Window Tiling Control — src/windowTracker.js
  * Tracks which windows are snapped, to which zone, on which monitor+workspace.
  *
  * SnapEntry: { presetId, zoneIndex, zoneRect: Meta.Rectangle, monitorIndex, workspaceIndex }

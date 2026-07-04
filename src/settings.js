@@ -1,10 +1,10 @@
 /**
- * FluxCut — src/settings.js
+ * WindowTilingControl — src/settings.js
  * Typed GSettings accessors for main and keybindings schemas.
  */
 
-const MAIN_SCHEMA = "org.gnome.shell.extensions.fluxcut";
-const KB_SCHEMA = "org.gnome.shell.extensions.fluxcut.keybindings";
+const MAIN_SCHEMA = "org.gnome.shell.extensions.window-tiling-control";
+const KB_SCHEMA = "org.gnome.shell.extensions.window-tiling-control.keybindings";
 
 export class Settings {
     constructor(extension) {
@@ -29,8 +29,8 @@ export class Settings {
 
     // ------------------------------------------------------------------ main
 
-    get enabled() { return this._settings.get_boolean("fluxcut-enabled"); }
-    set enabled(v) { this._settings.set_boolean("fluxcut-enabled", v); }
+    get enabled() { return this._settings.get_boolean("tiling-enabled"); }
+    set enabled(v) { this._settings.set_boolean("tiling-enabled", v); }
 
     get snapOverlayEnabled() { return this._settings.get_boolean("snap-overlay-enabled"); }
     get snapAssistEnabled() { return this._settings.get_boolean("snap-assist-enabled"); }

@@ -121,7 +121,7 @@ describe("SnapOverlay", () => {
         animations = makeAnimations();
 
         // Ensure Main.uiGroup is available
-        globalThis.__fluxcutMainSet__("uiGroup", {
+        globalThis.__wtcMainSet__("uiGroup", {
             _children: [],
             add_child: function (c) { this._children.push(c); },
             remove_child: function (c) { this._children = this._children.filter(x => x !== c); },

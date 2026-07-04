@@ -1,4 +1,4 @@
-EXTENSION_UUID = fluxcut@gnome-tiling
+EXTENSION_UUID = window-tiling-control@gnome-tiling
 INSTALL_DIR    = $(HOME)/.local/share/gnome-shell/extensions/$(EXTENSION_UUID)
 SCHEMA_DIR     = schemas
 PO_DIR         = po
@@ -52,8 +52,8 @@ po:
 pot:
 	xgettext --from-code=UTF-8 -L JavaScript \
 		--keyword=_ --keyword=ngettext:1,2 \
-		--package-name="FluxCut" \
-		--output=$(PO_DIR)/fluxcut.pot \
+		--package-name="Window Tiling Control" \
+		--output=$(PO_DIR)/window-tiling-control.pot \
 		extension.js prefs.js src/*.js
 
 # ── Build: copy everything needed into a staging tree under ./build/ ─────────
@@ -66,7 +66,7 @@ build: schemas po
 	@for lang in $(LOCALES); do \
 		mkdir -p build/$(EXTENSION_UUID)/locale/$$lang/LC_MESSAGES; \
 		[ -f $(PO_DIR)/$$lang.mo ] && \
-			cp $(PO_DIR)/$$lang.mo build/$(EXTENSION_UUID)/locale/$$lang/LC_MESSAGES/fluxcut.mo || true; \
+			cp $(PO_DIR)/$$lang.mo build/$(EXTENSION_UUID)/locale/$$lang/LC_MESSAGES/window-tiling-control.mo || true; \
 	done
 
 # ── Install ──────────────────────────────────────────────────────────────────
@@ -77,11 +77,13 @@ install: build
 	@echo ""
 	@echo "GNOME Shell only detects new extensions after a reload:"
 	@if [ "$$XDG_SESSION_TYPE" = "wayland" ]; then \
-		echo "  Wayland session → log out and back in, then: make enable"; \
+		echo "  Wayland session → log out and back in (this is the only safe way),"; \
+		echo "  then: make enable"; \
 	else \
-		echo "  X11 session → press Alt+F2, type 'r', Enter (or: killall -3 gnome-shell)"; \
+		echo "  X11 session → press Alt+F2, type 'r', Enter (reloads in place),"; \
 		echo "  then: make enable"; \
 	fi
+	@echo "  Do NOT 'killall gnome-shell' — on Wayland it ends your session."
 
 enable:
 	gnome-extensions enable $(EXTENSION_UUID)
@@ -95,8 +97,8 @@ uninstall: disable
 
 # ── Dev: install + enable + tail logs ────────────────────────────────────────
 dev: install enable
-	@echo "--- FluxCut dev mode: tailing logs (Ctrl‑C to stop) ---"
-	@journalctl -f -o cat | grep --line-buffered '\[FluxCut\]'
+	@echo "--- Window Tiling Control dev mode: tailing logs (Ctrl‑C to stop) ---"
+	@journalctl -f -o cat | grep --line-buffered '\[Window Tiling Control\]'
 
 # ── Dist: create installable zip ─────────────────────────────────────────────
 dist: build

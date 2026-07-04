@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/snapGroups.js
+ * WindowTilingControl — src/snapGroups.js
  * Tracks snap groups and shows a panel indicator button + popup when
  * groups exist on the active workspace.
  */
@@ -95,7 +95,7 @@ export class SnapGroupsManager {
 
     _buildButton() {
         this._button = new St.Button({
-            style_class: "fluxcut-groups-button panel-button",
+            style_class: "wtc-groups-button panel-button",
             can_focus: true,
             reactive: true,
             x_expand: false,
@@ -138,7 +138,7 @@ export class SnapGroupsManager {
         if (groups.size === 0) return;
 
         this._popup = new St.BoxLayout({
-            style_class: "fluxcut-groups-popup",
+            style_class: "wtc-groups-popup",
             vertical: true,
             reactive: true,
         });
@@ -167,7 +167,7 @@ export class SnapGroupsManager {
 
     _buildGroupRow(key, group) {
         const row = new St.BoxLayout({
-            style_class: "fluxcut-group-row",
+            style_class: "wtc-group-row",
             vertical: false,
             reactive: true,
             can_focus: true,
@@ -180,7 +180,7 @@ export class SnapGroupsManager {
                 gicon: app?.get_icon() ?? null,
                 icon_name: app ? null : "application-x-executable-symbolic",
                 icon_size: 20,
-                style_class: "fluxcut-group-icon",
+                style_class: "wtc-group-icon",
             });
             row.add_child(icon);
         }
@@ -188,7 +188,7 @@ export class SnapGroupsManager {
         if (group.members.length > 4) {
             row.add_child(new St.Label({
                 text: `+${group.members.length - 4}`,
-                style_class: "fluxcut-group-label",
+                style_class: "wtc-group-label",
                 y_align: Clutter.ActorAlign.CENTER,
             }));
         }

@@ -1,10 +1,10 @@
 /**
- * FluxCut — src/logger.js
+ * Window Tiling Control — src/logger.js
  * Leveled logging using native console methods.
  * Levels: 0=Off, 1=Error, 2=Warn, 3=Info, 4=Debug
  */
 
-const PREFIX = "[FluxCut]";
+const PREFIX = "[Window Tiling Control]";
 
 export const LogLevel = Object.freeze({
     OFF: 0,

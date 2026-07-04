@@ -1,9 +1,9 @@
 /**
- * FluxCut — src/keybindings.js
+ * WindowTilingControl — src/keybindings.js
  * Registers all configurable keybindings via Main.wm.addKeybinding.
  *
  * Keybinding names must exactly match the keys declared under the
- * org.gnome.shell.extensions.fluxcut.keybindings GSettings child schema.
+ * org.gnome.shell.extensions.window-tiling-control.keybindings GSettings child schema.
  */
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";

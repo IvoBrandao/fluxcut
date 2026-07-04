@@ -1,5 +1,5 @@
 /**
- * FluxCut — src/directionalMove.js
+ * Window Tiling Control — src/directionalMove.js
  * Pure, geometry-based i3-style directional movement model.
  *
  * A window is classified by its ACTUAL geometry (not tracked snap state) into a
