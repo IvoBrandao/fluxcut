@@ -9,7 +9,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { classifySlot, resolveMove, SLOT_MOVES } from "../src/directionalMove.js";
+import { classifySlot, resolveMove, slotFromEntry, SLOT_MOVES } from "../src/directionalMove.js";
 
 const WA = { x: 0, y: 0, width: 1920, height: 1080 };
 
@@ -97,6 +97,30 @@ describe("resolveMove — half enters the grid vertically", () => {
     it("maximized + Left/Right → halves", () => {
         assert.deepEqual(resolveMove("maxi", "left"), ["halves", 0]);
         assert.deepEqual(resolveMove("maxi", "right"), ["halves", 1]);
+    });
+});
+
+describe("slotFromEntry", () => {
+    it("maps halves entries to L/R", () => {
+        assert.equal(slotFromEntry({ presetId: "halves", zoneIndex: 0 }), "L");
+        assert.equal(slotFromEntry({ presetId: "halves", zoneIndex: 1 }), "R");
+    });
+    it("maps quarters entries to corner slots", () => {
+        assert.equal(slotFromEntry({ presetId: "quarters", zoneIndex: 0 }), "TL");
+        assert.equal(slotFromEntry({ presetId: "quarters", zoneIndex: 1 }), "TR");
+        assert.equal(slotFromEntry({ presetId: "quarters", zoneIndex: 2 }), "BL");
+        assert.equal(slotFromEntry({ presetId: "quarters", zoneIndex: 3 }), "BR");
+    });
+    it("returns null for no entry or a non-built-in preset", () => {
+        assert.equal(slotFromEntry(null), null);
+        assert.equal(slotFromEntry(undefined), null);
+        assert.equal(slotFromEntry({ presetId: "custom-xyz", zoneIndex: 0 }), null);
+    });
+    it("enables exact movement for a size-quirky app (Ghostty/Nautilus)", () => {
+        // A tracked top-right window whose real geometry drifted — the entry is
+        // authoritative, so Down still resolves to bottom-right.
+        const slot = slotFromEntry({ presetId: "quarters", zoneIndex: 1 });
+        assert.deepEqual(resolveMove(slot, "down"), ["quarters", 3]);
     });
 });
 

@@ -46,6 +46,26 @@ export function classifySlot(frame, workarea) {
     return `${top ? "T" : "B"}${left ? "L" : "R"}`;
 }
 
+/** Map a tracked snap entry (presetId + zoneIndex) → movement slot. */
+const ENTRY_TO_SLOT = {
+    halves:   { 0: "L",  1: "R" },
+    quarters: { 0: "TL", 1: "TR", 2: "BL", 3: "BR" },
+};
+
+/**
+ * Derive the movement slot from a tracked snap entry. This is EXACT and
+ * immune to apps that don't honour the requested size (terminals with cell-size
+ * increments like Ghostty, or min-size CSD apps like Nautilus), whose real
+ * geometry drifts from the ideal zone and would otherwise misclassify.
+ *
+ * @param {{presetId: string, zoneIndex: number}|null|undefined} entry
+ * @returns {string|null} slot, or null when the entry isn't a built-in zone.
+ */
+export function slotFromEntry(entry) {
+    if (!entry) return null;
+    return ENTRY_TO_SLOT[entry.presetId]?.[entry.zoneIndex] ?? null;
+}
+
 /**
  * Resolve the target zone for a directional move.
  *

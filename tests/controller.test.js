@@ -13,7 +13,7 @@ import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 import { setupGnomeGlobals, Rect } from "./helpers/gnome-globals.js";
-import { classifySlot, resolveMove } from "../src/directionalMove.js";
+import { classifySlot, resolveMove, slotFromEntry } from "../src/directionalMove.js";
 
 // ── Controller Shim ──────────────────────────────────────────────────────────
 // We test the snap routing logic in isolation. The directional handlers
@@ -126,7 +126,9 @@ class TestController {
 
         const wa = this._zoneManager._getWorkarea(win.get_monitor());
         if (!wa) return;
-        const slot = classifySlot(win.get_frame_rect(), wa);
+        // Prefer the exact tracked entry over geometry (production behaviour).
+        const entry = this._windowTracker.getSnapEntry(win);
+        const slot = slotFromEntry(entry) ?? classifySlot(win.get_frame_rect(), wa);
         const target = resolveMove(slot, direction);
         if (!target) return;
 
@@ -286,6 +288,16 @@ describe("Controller snap dispatch", () => {
             display._setFocusWindow(null);
             ctrl.moveSwapFocused("left");
             assert.equal(ctrl._windowTracker._snapCalls.length, 0);
+        });
+
+        it("uses the tracked entry when geometry drifted (Ghostty/Nautilus)", () => {
+            // Window is tracked at top-right, but its REAL geometry looks
+            // maximized (size-quirky app didn't honour the zone). The entry must
+            // win, so Down → bottom-right rather than a maxi no-op.
+            const win = focusSlot("maxi");
+            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "quarters", zoneIndex: 1 });
+            ctrl.snapFocusedToLowerQuarter();
+            assert.deepEqual([lastSnap().presetId, lastSnap().zoneIndex], ["quarters", 3]);
         });
     });
 

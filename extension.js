@@ -30,7 +30,7 @@ import { RoundedCorners } from "./src/roundedCorners.js";
 import { Keybindings } from "./src/keybindings.js";
 import { Indicator } from "./src/indicator.js";
 import { isFullyMaximized } from "./src/compat.js";
-import { classifySlot, resolveMove } from "./src/directionalMove.js";
+import { classifySlot, resolveMove, slotFromEntry } from "./src/directionalMove.js";
 
 // ---------------------------------------------------------------------------
 
@@ -458,7 +458,13 @@ class WindowTilingControlController {
         const win = global.display.get_focus_window();
         if (!win) return;
 
-        const slot = this._classifySlot(win);
+        // Prefer the tracked snap entry (EXACT) over geometry. Apps that don't
+        // honour the requested size — terminals with cell increments (Ghostty),
+        // min-size/CSD apps (Nautilus) — end up slightly off their zone, so
+        // re-reading geometry would misclassify them. Fall back to geometry only
+        // for windows we've never snapped.
+        const entry = this._windowTracker.getSnapEntry(win);
+        const slot = slotFromEntry(entry) ?? this._classifySlot(win);
         const target = slot && resolveMove(slot, direction);
         if (!target) return; // no neighbour that way (outer edge) — no-op
 
