@@ -64,8 +64,12 @@ export class Animations {
             duration: durationMs,
             mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
             onComplete: () => {
-                actor.hide();
-                onComplete?.();
+                // The actor may have been destroyed by another code path
+                // (clearAll/close) while the fade was in flight.
+                try {
+                    actor.hide();
+                    onComplete?.();
+                } catch (_) {}
             },
         });
     }
@@ -107,12 +111,14 @@ export class Animations {
             duration: half,
             mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
             onComplete: () => {
-                actor.ease({
-                    scale_x: 1.0,
-                    scale_y: 1.0,
-                    duration: half,
-                    mode: Clutter.AnimationMode.EASE_OUT_BACK,
-                });
+                try {
+                    actor.ease({
+                        scale_x: 1.0,
+                        scale_y: 1.0,
+                        duration: half,
+                        mode: Clutter.AnimationMode.EASE_OUT_BACK,
+                    });
+                } catch (_) {}
             },
         });
     }
@@ -150,7 +156,7 @@ export class Animations {
             onComplete: () => {
                 // The actual window geometry change — actor will be reset by
                 // the compositor after move_resize_frame.
-                onComplete?.();
+                try { onComplete?.(); } catch (_) {}
             },
         });
     }

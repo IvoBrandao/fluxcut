@@ -1,6 +1,6 @@
 /**
  * FluxCut — src/compat.js
- * GNOME Shell version compatibility shim (45–49+).
+ * GNOME Shell version compatibility shim (45–50+).
  *
  * API changes across versions:
  *   - GNOME 46+: Meta.Rectangle removed → Mtk.Rectangle

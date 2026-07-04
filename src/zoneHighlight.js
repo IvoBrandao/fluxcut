@@ -54,9 +54,11 @@ export class ZoneHighlighter {
     /** Remove all highlight actors. */
     clearAll() {
         for (const h of this._highlights) {
-            if (global.window_group.contains(h.actor))
-                global.window_group.remove_child(h.actor);
-            h.actor.destroy();
+            try {
+                if (global.window_group.contains(h.actor))
+                    global.window_group.remove_child(h.actor);
+                h.actor.destroy();
+            } catch (_) {}
         }
         this._highlights = [];
         this._currentPreset = null;

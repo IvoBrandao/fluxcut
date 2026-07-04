@@ -42,6 +42,19 @@ export class MaximizeHook {
         this._displaySignals = [];
         this._startupTimerId = null;
         this._grabCooldownId = null;
+
+        /** Set of pending one-shot GLib source ids (timeouts/idles) so they
+         *  can all be cancelled on disable and never fire on a disposed hook. */
+        this._pendingSources = new Set();
+    }
+
+    /**
+     * Register a one-shot GLib source and auto-remove it from the tracking
+     * set when it fires.  Returns the source id.
+     */
+    _addSource(id) {
+        this._pendingSources.add(id);
+        return id;
     }
 
     enable() {
@@ -67,10 +80,12 @@ export class MaximizeHook {
                 const id = win.get_id();
                 this._recentlyCreated.add(id);
                 // Clear the new-window flag after 3 s (increased from 1.5 s)
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 3000, () => {
+                let sid;
+                sid = this._addSource(GLib.timeout_add(GLib.PRIORITY_DEFAULT, 3000, () => {
                     this._recentlyCreated.delete(id);
+                    this._pendingSources.delete(sid);
                     return GLib.SOURCE_REMOVE;
-                });
+                }));
             }),
             // Track grab operations so drag-to-top-edge maximize is not
             // intercepted (the user intends to maximize, not open the overlay).
@@ -102,6 +117,11 @@ export class MaximizeHook {
             this._grabCooldownId = null;
         }
 
+        // Cancel any pending one-shot sources (bypass/new-window/overlay-open)
+        for (const id of this._pendingSources)
+            try { GLib.Source.remove(id); } catch (_) {}
+        this._pendingSources.clear();
+
         for (const id of this._wmSignals)
             try { global.window_manager.disconnect(id); } catch (_) {}
         this._wmSignals = [];
@@ -123,10 +143,12 @@ export class MaximizeHook {
      */
     bypass(windowId) {
         this._bypassed.add(windowId);
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+        let sid;
+        sid = this._addSource(GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
             this._bypassed.delete(windowId);
+            this._pendingSources.delete(sid);
             return GLib.SOURCE_REMOVE;
-        });
+        }));
     }
 
     // ------------------------------------------------------------------ private
@@ -161,11 +183,13 @@ export class MaximizeHook {
         this._bypassed.add(win.get_id());
         win.unmaximize(Meta.MaximizeFlags.BOTH);
 
-        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+        let sid;
+        sid = this._addSource(GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            this._pendingSources.delete(sid);
             this._bypassed.delete(win.get_id());
             if (!win.is_hidden())
                 this._snapOverlay.open(win);
             return GLib.SOURCE_REMOVE;
-        });
+        }));
     }
 }

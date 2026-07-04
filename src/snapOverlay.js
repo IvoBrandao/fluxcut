@@ -42,7 +42,7 @@ export class SnapOverlay {
         this._focusedButtonIdx = 0;
 
         // Rebuild buttons when custom zones change
-        this._customZones.connect("changed", () => {
+        this._customZonesSignalId = this._customZones.connect("changed", () => {
             if (this._widget) {
                 this.close();
             }
@@ -120,6 +120,10 @@ export class SnapOverlay {
 
     destroy() {
         this.close();
+        if (this._customZonesSignalId) {
+            this._customZones.disconnect(this._customZonesSignalId);
+            this._customZonesSignalId = null;
+        }
     }
 
     // ------------------------------------------------------------------ private — build

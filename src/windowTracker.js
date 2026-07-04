@@ -27,6 +27,9 @@ export class WindowTracker {
         // Global display signal IDs
         this._signalIds = [];
 
+        /** Pending one-shot GLib source ids (deferred watch / snap-assist). */
+        this._pendingSources = new Set();
+
         this._snapAssist = null; // set by controller after construction
     }
 
@@ -45,6 +48,11 @@ export class WindowTracker {
     }
 
     disable() {
+        // Cancel pending one-shot sources so they never fire post-disable
+        for (const id of this._pendingSources)
+            try { GLib.Source.remove(id); } catch (_) {}
+        this._pendingSources.clear();
+
         // Disconnect global signals
         for (const id of this._signalIds)
             global.display.disconnect(id);
@@ -55,7 +63,7 @@ export class WindowTracker {
             const win = this._findWindowById(windowId);
             if (win) {
                 for (const id of ids)
-                    win.disconnect(id);
+                    try { win.disconnect(id); } catch (_) {}
             }
         }
         this._windowSignals.clear();
@@ -100,10 +108,13 @@ export class WindowTracker {
 
             if (remaining.length > 0) {
                 // Brief delay so Mutter finishes the window transition
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+                let sid;
+                sid = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+                    this._pendingSources.delete(sid);
                     this._snapAssist?.show(presetId, monitorIndex, workspaceIndex, remaining);
                     return GLib.SOURCE_REMOVE;
                 });
+                this._pendingSources.add(sid);
             } else {
                 this._snapAssist?.destroyAll();
             }
@@ -231,10 +242,14 @@ export class WindowTracker {
 
     _onWindowCreated(metaWindow) {
         // Give the window time to get a workspace and monitor assigned
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
-            this._watchWindow(metaWindow);
+        let sid;
+        sid = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+            this._pendingSources.delete(sid);
+            // The window may have been unmanaged while we waited.
+            try { this._watchWindow(metaWindow); } catch (_) {}
             return GLib.SOURCE_REMOVE;
         });
+        this._pendingSources.add(sid);
     }
 
     _watchWindow(metaWindow) {

@@ -221,8 +221,10 @@ export class SnapAssist {
         this._stopDismissTimer();
         const timeout = (this._settings.snapAssistTimeout ?? 8) * 1000;
         this._dismissTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, timeout, () => {
-            this.destroyAll();
+            // Clear the id first: destroyAll() calls _stopDismissTimer(), and
+            // removing the source that is currently firing would double-remove.
             this._dismissTimerId = null;
+            this.destroyAll();
             return GLib.SOURCE_REMOVE;
         });
     }

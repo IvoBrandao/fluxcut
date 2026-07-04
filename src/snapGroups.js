@@ -214,9 +214,12 @@ export class SnapGroupsManager {
         }
 
         if (this._popup) {
-            this._animations.fadeOut(this._popup, undefined, () => {
-                this._popup?.destroy();
-                this._popup = null;
+            // Capture the current popup locally: a new popup may be opened
+            // before this fade finishes, and we must not destroy that one.
+            const popup = this._popup;
+            this._popup = null;
+            this._animations.fadeOut(popup, undefined, () => {
+                popup.destroy();
             });
         }
 
