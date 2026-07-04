@@ -56,6 +56,7 @@ const FluxCutToggle = GObject.registerClass(
                 { key: "snap-assist-enabled",        label: _("Snap Assist") },
                 { key: "drag-zone-highlight-enabled",label: _("Zone Highlights on Drag") },
                 { key: "snap-groups-enabled",        label: _("Snap Groups in Panel") },
+                { key: "rounded-corners-enabled",    label: _("Rounded Window Corners") },
             ];
 
             for (const { key, label } of toggles) {

@@ -11,6 +11,7 @@ import St from "gi://St";
 import Clutter from "gi://Clutter";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { getPresetsForAspectRatio } from "./layoutPresets.js";
+import { AccentColor } from "./accentColor.js";
 import { _ } from "./i18n.js";
 
 // Stable X11 keysym values — avoids Clutter.KEY_* dependency
@@ -40,6 +41,7 @@ export class SnapOverlay {
         this._focusedWindow = null;
         this._buttons = [];
         this._focusedButtonIdx = 0;
+        this._accent = new AccentColor(logger);
 
         // Rebuild buttons when custom zones change
         this._customZonesSignalId = this._customZones.connect("changed", () => {
@@ -200,6 +202,11 @@ export class SnapOverlay {
             const block = new St.Bin({
                 style_class: i === 0 ? "fluxcut-zone-block-primary" : "fluxcut-zone-block",
             });
+            if (i === 0 && this._settings.useAccentColor) {
+                block.style =
+                    `background-color: ${this._accent.rgba(0.55)}; ` +
+                    `border: 1px solid ${this._accent.rgba(0.90)};`;
+            }
             const margin = 1;
             block.set_position(
                 Math.round(z.x * DIAGRAM_W) + margin,
@@ -238,14 +245,34 @@ export class SnapOverlay {
             return;
         }
 
-        const firstRect = rects[0];
-        this._windowTracker.snapWindow(win, preset.id, 0, firstRect);
-
-        // Scale snap feedback
-        const actor = win.get_compositor_private();
-        if (actor) this._animations.scaleSnap(actor);
-
+        this._distributeWindows(win, preset.id, monitorIndex, rects);
         this.close();
+    }
+
+    /**
+     * Assign every tileable window on the monitor+workspace to the preset's
+     * zones, in order. The focused window takes the first zone. When there are
+     * more windows than zones, the extras wrap around and stack on top of the
+     * earlier zones (window i → zone i % zoneCount). When there are fewer
+     * windows than zones, the trailing zones are simply left empty.
+     */
+    _distributeWindows(focusedWin, presetId, monitorIndex, rects) {
+        const wsIndex = focusedWin.get_workspace().index();
+
+        // Focused window first, then the rest in their current stacking order.
+        const others = this._windowTracker
+            .getTileableWindows(monitorIndex, wsIndex)
+            .filter(w => w !== focusedWin);
+        const ordered = [focusedWin, ...others];
+
+        for (let i = 0; i < ordered.length; i++) {
+            const zoneIndex = i % rects.length;
+            this._windowTracker.snapWindow(ordered[i], presetId, zoneIndex, rects[zoneIndex]);
+        }
+
+        // Scale snap feedback on the focused window.
+        const actor = focusedWin.get_compositor_private();
+        if (actor) this._animations.scaleSnap(actor);
     }
 
     _onKeyPress(event) {

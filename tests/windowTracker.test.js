@@ -252,6 +252,39 @@ describe("WindowTracker — getUnsnappedWindows", () => {
     });
 });
 
+// ── getTileableWindows ────────────────────────────────────────────────────────
+
+describe("WindowTracker — getTileableWindows", () => {
+    let tracker, allWindows;
+
+    beforeEach(() => {
+        ({ tracker, allWindows } = makeTracker(makeSettings(), makeZoneManager()));
+    });
+
+    it("includes already-snapped windows (unlike getUnsnappedWindows)", () => {
+        const win = makeWindow({ monitorIndex: 0, workspaceIndex: 0 });
+        register(allWindows, win);
+        tracker.snapWindow(win, "halves", 0, ZONE_RECT_LEFT, false);
+        assert.equal(tracker.getTileableWindows(0, 0).length, 1);
+        assert.equal(tracker.getUnsnappedWindows(0, 0).length, 0);
+    });
+
+    it("excludes minimized windows", () => {
+        const win = makeWindow({ monitorIndex: 0, workspaceIndex: 0, minimized: true });
+        register(allWindows, win);
+        assert.equal(tracker.getTileableWindows(0, 0).length, 0);
+    });
+
+    it("filters to the specified monitor+workspace", () => {
+        const a = makeWindow({ monitorIndex: 0, workspaceIndex: 0 });
+        const b = makeWindow({ monitorIndex: 1, workspaceIndex: 0 });
+        register(allWindows, a, b);
+        const tileable = tracker.getTileableWindows(0, 0);
+        assert.equal(tileable.length, 1);
+        assert.strictEqual(tileable[0], a);
+    });
+});
+
 // ── _onWindowMoved (drift detection) ─────────────────────────────────────────
 
 describe("WindowTracker — drift unsnap", () => {

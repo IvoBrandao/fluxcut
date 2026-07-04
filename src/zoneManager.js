@@ -5,6 +5,7 @@
  */
 
 import Meta from "gi://Meta";
+import GLib from "gi://GLib";
 import { getPresetById, PRESETS } from "./layoutPresets.js";
 import { makeRect, getMaximizeFlags } from "./compat.js";
 
@@ -13,6 +14,33 @@ export class ZoneManager {
         this._settings = settings;
         this._customZones = customZones;
         this._log = logger;
+
+        // Memoized pixel rects keyed by preset|monitor|gap|workarea.
+        // getZoneRects is called on every drag-poll frame (~60/s), so caching
+        // avoids recomputing normalized→pixel math and Meta.Rectangle allocs.
+        this._rectCache = new Map();
+        this._cacheSignalId = this._customZones?.connect?.(
+            "changed", () => this.invalidateCache()
+        ) ?? null;
+
+        // Pending one-shot sources for deferred re-apply of window geometry.
+        this._pendingSources = new Set();
+    }
+
+    /** Clear the memoized zone-rect cache (custom zones or monitors changed). */
+    invalidateCache() {
+        this._rectCache.clear();
+    }
+
+    destroy() {
+        if (this._cacheSignalId !== null) {
+            try { this._customZones.disconnect(this._cacheSignalId); } catch (_) {}
+            this._cacheSignalId = null;
+        }
+        for (const id of this._pendingSources)
+            try { GLib.Source.remove(id); } catch (_) {}
+        this._pendingSources.clear();
+        this._rectCache.clear();
     }
 
     // ------------------------------------------------------------------ zone rect calculation
@@ -30,13 +58,22 @@ export class ZoneManager {
         const workarea = this._getWorkarea(monitorIndex);
         if (!workarea) return [];
 
+        // Cache key includes the workarea geometry so it self-invalidates when
+        // the monitor/panel layout changes without an explicit signal.
+        const key = `${presetId}|${monitorIndex}|${gap}|` +
+            `${workarea.x},${workarea.y},${workarea.width},${workarea.height}`;
+        const cached = this._rectCache.get(key);
+        if (cached) return cached;
+
         const preset = getPresetById(presetId) ?? this._customZones.getById(presetId);
         if (!preset) {
             this._log?.warn(`ZoneManager: unknown preset '${presetId}'`);
             return [];
         }
 
-        return preset.zones.map(norm => this._normToPixel(norm, workarea, gap));
+        const rects = preset.zones.map(norm => this._normToPixel(norm, workarea, gap));
+        this._rectCache.set(key, rects);
+        return rects;
     }
 
     /**
@@ -153,17 +190,41 @@ export class ZoneManager {
     assignWindowToZone(metaWindow, zoneRect) {
         if (!metaWindow) return;
 
-        // Must unmaximize before resizing (GNOME ignores move_resize on maximized windows)
+        const apply = () => {
+            metaWindow.move_resize_frame(
+                true,
+                zoneRect.x, zoneRect.y,
+                zoneRect.width, zoneRect.height
+            );
+        };
+
+        // Is the window maximized OR in a Mutter tiled state? (edge-tiled
+        // windows report maximized_vertically.) Both must be cleared first.
         const maxFlags = getMaximizeFlags(metaWindow);
-        if (maxFlags) {
-            metaWindow.unmaximize(Meta.MaximizeFlags.BOTH);
+
+        if (!maxFlags) {
+            // Common case (quarter→quarter, half→quarter, …): a single
+            // synchronous move. No double-apply — that caused a visible glitch.
+            apply();
+            return;
         }
 
-        metaWindow.move_resize_frame(
-            true,
-            zoneRect.x, zoneRect.y,
-            zoneRect.width, zoneRect.height
-        );
+        // Maximized/tiled: unmaximizing restores the saved geometry
+        // ASYNCHRONOUSLY, which would override a synchronous move and leave the
+        // window "stuck" in place. So unmaximize now and apply on the next idle,
+        // after Mutter has finished its restore.
+        metaWindow.unmaximize(Meta.MaximizeFlags.BOTH);
+
+        let sid;
+        sid = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            this._pendingSources.delete(sid);
+            try {
+                if (metaWindow.get_compositor_private?.())
+                    apply();
+            } catch (_) {}
+            return GLib.SOURCE_REMOVE;
+        });
+        this._pendingSources.add(sid);
     }
 
     /**

@@ -190,8 +190,17 @@ export default class FluxCutPreferences extends ExtensionPreferences {
             ["Off", "Fast", "Normal", "Slow"]
         ));
 
-        const colorGroup = new Adw.PreferencesGroup({ title: "Zone Colors" });
+        const colorGroup = new Adw.PreferencesGroup({
+            title: "Zone Colors",
+            description: "Custom colors apply only when the system accent color is turned off.",
+        });
         page.add(colorGroup);
+
+        colorGroup.add(this._switchRow(
+            settings, "use-accent-color",
+            "Use System Accent Color",
+            "Tint zone highlights with the GNOME accent color (GNOME 47+)"
+        ));
 
         colorGroup.add(this._colorRow(
             settings, "zone-highlight-color",
@@ -203,6 +212,22 @@ export default class FluxCutPreferences extends ExtensionPreferences {
             settings, "zone-border-color",
             "Highlight Border Color",
             "RGBA border color of hovered zone highlight"
+        ));
+
+        const cornersGroup = new Adw.PreferencesGroup({ title: "Window Corners" });
+        page.add(cornersGroup);
+
+        cornersGroup.add(this._switchRow(
+            settings, "rounded-corners-enabled",
+            "Rounded Window Corners",
+            "Clip normal windows to rounded corners (skips maximized/fullscreen)"
+        ));
+
+        cornersGroup.add(this._spinRow(
+            settings, "rounded-corners-radius",
+            "Corner Radius (px)",
+            "Radius of the rounded window corners",
+            0, 40, 1
         ));
 
         return page;

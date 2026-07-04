@@ -47,6 +47,7 @@ export class RoundedCorners {
         this._log = logger;
         this._signalIds = [];
         this._settingsSignalIds = [];
+        this._pendingSources = new Set();
         this._enabled = false;
     }
 
@@ -70,6 +71,9 @@ export class RoundedCorners {
 
         this._unwatchSettings();
         this._disconnectWindowSignals();
+        for (const id of this._pendingSources)
+            try { GLib.Source.remove(id); } catch (_) {}
+        this._pendingSources.clear();
         this._removeFromAll();
     }
 
@@ -103,10 +107,13 @@ export class RoundedCorners {
         this._disconnectWindowSignals();
         this._signalIds.push(
             global.display.connect("window-created", (_dpy, metaWindow) => {
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+                let sid;
+                sid = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+                    this._pendingSources.delete(sid);
                     this._applyToWindow(metaWindow);
                     return GLib.SOURCE_REMOVE;
                 });
+                this._pendingSources.add(sid);
             })
         );
     }
@@ -203,10 +210,13 @@ export class RoundedCorners {
     _onWindowStateChanged(metaWindow) {
         if (!this._settings.roundedCornersEnabled) return;
         // Brief delay for the state to settle
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+        let sid;
+        sid = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+            this._pendingSources.delete(sid);
             this._applyToWindow(metaWindow);
             return GLib.SOURCE_REMOVE;
         });
+        this._pendingSources.add(sid);
     }
 
     _applyToActor(actor) {

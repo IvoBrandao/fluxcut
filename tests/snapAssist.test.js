@@ -132,6 +132,19 @@ describe("SnapAssist", () => {
             assist.show("halves", 0, 0, [zone]);
             assert.notEqual(assist._dismissTimerId, null);
         });
+
+        it("closes all overlays when a window gains focus", () => {
+            windowTracker = makeWindowTracker([makeWindow()]);
+            assist = new SnapAssist(settings, windowTracker, zoneManager, animations, makeLogger());
+
+            const zone = { rect: new Rect(960, 0, 960, 1080), zoneIndex: 1 };
+            assist.show("halves", 0, 0, [zone]);
+            assert.equal(assist._overlays.length, 1);
+
+            // Focusing any window should dismiss the remaining-zone previews.
+            global.display._emit("notify::focus-window");
+            assert.equal(assist._overlays.length, 0);
+        });
     });
 
     describe("destroyAll", () => {

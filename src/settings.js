@@ -12,6 +12,21 @@ export class Settings {
         this._kbSettings = extension.getSettings(KB_SCHEMA);
     }
 
+    /**
+     * Read a key defensively. If the *installed* compiled schema is older than
+     * the code (e.g. the user ran `make enable` without re-running `make
+     * install` after a schema change), the key may be absent — reading it would
+     * throw. Fall back to the supplied default instead of crashing.
+     */
+    _get(kind, key, fallback) {
+        try {
+            if (!this._settings.settings_schema?.has_key(key)) return fallback;
+            return this._settings[`get_${kind}`](key);
+        } catch (_) {
+            return fallback;
+        }
+    }
+
     // ------------------------------------------------------------------ main
 
     get enabled() { return this._settings.get_boolean("fluxcut-enabled"); }
@@ -28,6 +43,7 @@ export class Settings {
     get animationSpeed() { return this._settings.get_uint("animation-speed"); }
 
     get overlayPosition() { return this._settings.get_string("overlay-position"); }
+    get useAccentColor() { return this._get("boolean", "use-accent-color", true); }
     get zoneHighlightColor() { return this._settings.get_string("zone-highlight-color"); }
     get zoneBorderColor() { return this._settings.get_string("zone-border-color"); }
 
@@ -42,8 +58,8 @@ export class Settings {
 
     get logLevel() { return this._settings.get_uint("log-level"); }
 
-    get roundedCornersEnabled() { return this._settings.get_boolean("rounded-corners-enabled"); }
-    get roundedCornersRadius() { return this._settings.get_uint("rounded-corners-radius"); }
+    get roundedCornersEnabled() { return this._get("boolean", "rounded-corners-enabled", false); }
+    get roundedCornersRadius() { return this._get("uint", "rounded-corners-radius", 12); }
 
     // ------------------------------------------------------------------ bind helpers
 

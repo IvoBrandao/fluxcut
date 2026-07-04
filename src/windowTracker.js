@@ -238,6 +238,21 @@ export class WindowTracker {
         });
     }
 
+    /**
+     * All tileable windows on a monitor+workspace, whether currently snapped
+     * or not.  Excludes minimized, skip-taskbar and non-normal windows.
+     * Used when (re)distributing every window across a chosen preset.
+     */
+    getTileableWindows(monitorIndex, workspaceIndex) {
+        return this._getAllWindows().filter(win => {
+            if (win.get_monitor() !== monitorIndex) return false;
+            if (win.get_workspace().index() !== workspaceIndex) return false;
+            if (win.minimized) return false;
+            if (win.skip_taskbar) return false;
+            return true;
+        });
+    }
+
     // ------------------------------------------------------------------ private
 
     _onWindowCreated(metaWindow) {

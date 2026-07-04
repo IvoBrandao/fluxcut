@@ -78,6 +78,12 @@
       <description>Where the Super+Z snap overlay appears: 'top-center' or 'top-right'.</description>
     </key>
 
+    <key name="use-accent-color" type="b">
+      <default>true</default>
+      <summary>Use System Accent Color</summary>
+      <description>Tint zone highlights and overlays with the GNOME accent color (GNOME 47+). When off, the custom colors below are used.</description>
+    </key>
+
     <key name="zone-highlight-color" type="s">
       <default>'rgba(0,120,212,0.30)'</default>
       <summary>Zone Highlight Fill Color</summary>
@@ -88,6 +94,20 @@
       <default>'rgba(0,120,212,1.0)'</default>
       <summary>Zone Border Color</summary>
       <description>RGBA color for zone highlight borders and the active zone.</description>
+    </key>
+
+    <!-- Rounded corners -->
+    <key name="rounded-corners-enabled" type="b">
+      <default>false</default>
+      <summary>Rounded Window Corners</summary>
+      <description>Clip normal windows to rounded corners (disabled on maximized/fullscreen windows).</description>
+    </key>
+
+    <key name="rounded-corners-radius" type="u">
+      <default>12</default>
+      <range min="0" max="40"/>
+      <summary>Corner Radius</summary>
+      <description>Rounded corner radius in pixels.</description>
     </key>
 
     <!-- Custom zones (JSON-encoded) -->

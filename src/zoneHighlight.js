@@ -5,6 +5,7 @@
  */
 
 import St from "gi://St";
+import { AccentColor } from "./accentColor.js";
 
 export class ZoneHighlighter {
     constructor(settings, dragDetector, windowTracker, zoneManager, animations, logger) {
@@ -20,6 +21,7 @@ export class ZoneHighlighter {
         this._currentPreset = null;
         this._currentMonitor = -1;
 
+        this._accent = new AccentColor(logger);
         this._signalIds = [];
     }
 
@@ -38,7 +40,25 @@ export class ZoneHighlighter {
         for (const id of this._signalIds)
             this._dragDetector.disconnect(id);
         this._signalIds = [];
+        this._accent.disconnect();
         this.clearAll();
+    }
+
+    /**
+     * Inline style for a zone highlight actor. Uses the GNOME accent color
+     * when enabled, otherwise the user's custom fill/border colors.
+     */
+    _zoneStyle(isActive) {
+        let fill, border;
+        if (this._settings.useAccentColor) {
+            fill   = this._accent.rgba(isActive ? 0.50 : 0.30);
+            border = this._accent.rgba(isActive ? 1.0  : 0.80);
+        } else {
+            fill   = this._settings.zoneHighlightColor;
+            border = this._settings.zoneBorderColor;
+        }
+        const bw = isActive ? 4 : 3;
+        return `background-color: ${fill}; border: ${bw}px solid ${border}; border-radius: 8px;`;
     }
 
     // ------------------------------------------------------------------ public
@@ -128,6 +148,7 @@ export class ZoneHighlighter {
 
             const actor = new St.Bin({
                 style_class: isActive ? "fluxcut-zone-active" : "fluxcut-zone-inactive",
+                style: this._zoneStyle(isActive),
                 reactive: false,
             });
 
@@ -149,8 +170,10 @@ export class ZoneHighlighter {
 
             if (shouldBeActive && !isActive) {
                 h.actor.style_class = "fluxcut-zone-active";
+                h.actor.style = this._zoneStyle(true);
             } else if (!shouldBeActive && isActive) {
                 h.actor.style_class = "fluxcut-zone-inactive";
+                h.actor.style = this._zoneStyle(false);
             }
         }
     }

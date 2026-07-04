@@ -68,6 +68,7 @@ function makeWindowTracker() {
     const calls = [];
     return {
         snapWindow: (...args) => calls.push(["snapWindow", ...args]),
+        getTileableWindows: () => [],
         _calls: calls,
     };
 }
@@ -98,6 +99,7 @@ function makeWindow(monitorIndex = 0) {
     return {
         get_id: () => 42,
         get_monitor: () => monitorIndex,
+        get_workspace: () => ({ index: () => 0 }),
         get_compositor_private: () => ({ opacity: 255 }),
     };
 }
@@ -220,6 +222,24 @@ describe("SnapOverlay", () => {
             const preset = { id: "empty", label: "Empty", zones: [] };
             overlay._onButtonClicked(preset, 0);
             assert.equal(overlay._widget, null);
+        });
+
+        it("distributes all windows across zones, wrapping extras", () => {
+            const focused = makeWindow(0);
+            const w2 = { ...makeWindow(0), get_id: () => 2 };
+            const w3 = { ...makeWindow(0), get_id: () => 3 };
+            windowTracker.getTileableWindows = () => [focused, w2, w3];
+
+            overlay.open(focused);
+            const preset = { id: "halves", label: "Halves", zones: [{ x: 0, y: 0, w: 0.5, h: 1 }, { x: 0.5, y: 0, w: 0.5, h: 1 }] };
+            overlay._onButtonClicked(preset, 0);
+
+            const snaps = windowTracker._calls.filter(c => c[0] === "snapWindow");
+            assert.equal(snaps.length, 3);
+            assert.equal(snaps[0][1], focused);  // focused → zone 0
+            assert.equal(snaps[0][3], 0);
+            assert.equal(snaps[1][3], 1);        // second → zone 1
+            assert.equal(snaps[2][3], 0);        // third wraps → zone 0
         });
     });
 

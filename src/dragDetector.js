@@ -95,6 +95,8 @@ export const DragDetector = GObject.registerClass(
             this._dragging = true;
             this._draggedWindow = metaWindow;
             this._lastHoveredZone = null;
+            this._lastPx = null;
+            this._lastPy = null;
             this._startPolling();
         }
 
@@ -151,6 +153,13 @@ export const DragDetector = GObject.registerClass(
 
         _poll() {
             const [px, py] = global.get_pointer();
+
+            // Skip all zone math when the pointer hasn't moved since the last
+            // 16ms frame — nothing can change, so there's no work to do.
+            if (px === this._lastPx && py === this._lastPy) return;
+            this._lastPx = px;
+            this._lastPy = py;
+
             const monitorIndex = this._zoneManager.getMonitorForPoint(px, py);
 
             // Edge/corner detection takes priority over active-preset zones

@@ -13,11 +13,25 @@ import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 import { setupGnomeGlobals, Rect } from "./helpers/gnome-globals.js";
+import { classifySlot, resolveMove } from "../src/directionalMove.js";
 
 // ── Controller Shim ──────────────────────────────────────────────────────────
-// We test the snap routing logic in isolation — the same code that runs
-// inside FluxCutController.snapFocusedToPreset, snapFocusedToUpperQuarter,
-// snapFocusedToLowerQuarter, and moveSwapFocused.
+// We test the snap routing logic in isolation. The directional handlers
+// delegate to the REAL geometry-based model (src/directionalMove.js), exactly
+// as FluxCutController does, so this exercises production code paths.
+
+const WORKAREA = { x: 0, y: 0, width: 1920, height: 1080 };
+
+// Frame rects that classify to each slot (see directionalMove.classifySlot).
+const SLOT_FRAMES = {
+    maxi: new Rect(0, 0, 1920, 1080),
+    L:    new Rect(0, 0, 960, 1080),
+    R:    new Rect(960, 0, 960, 1080),
+    TL:   new Rect(0, 0, 960, 540),
+    TR:   new Rect(960, 0, 960, 540),
+    BL:   new Rect(0, 540, 960, 540),
+    BR:   new Rect(960, 540, 960, 540),
+};
 
 function makeSettings() {
     return { windowGapSize: 8 };
@@ -36,6 +50,7 @@ function makeZoneManager() {
     ];
 
     return {
+        _getWorkarea: () => WORKAREA,
         getZoneRects: (presetId, _monitorIndex, _gap) => {
             if (presetId === "halves") return HALVES;
             if (presetId === "quarters") return QUARTERS;
@@ -65,10 +80,13 @@ function makeWindowTracker() {
 }
 
 function makeWindow(id = 1, monitorIndex = 0) {
+    let frame = SLOT_FRAMES.maxi;
     return {
         get_id: () => id,
         get_monitor: () => monitorIndex,
         get_maximized: () => 0,
+        get_frame_rect: () => frame,
+        _setSlot: (slot) => { frame = SLOT_FRAMES[slot]; },
         maximize: () => {},
         unmaximize: () => {},
         minimize: () => {},
@@ -100,78 +118,27 @@ class TestController {
         this._windowTracker.snapWindow(win, presetId, zoneIndex, rect);
     }
 
-    snapFocusedToUpperQuarter() {
-        if (!this._windowTracker) return;
+    // Geometry-based directional move — the production code path.
+    _directionalMove(direction) {
+        if (!this._windowTracker || !this._zoneManager) return;
         const win = global.display.get_focus_window();
         if (!win) return;
 
-        const entry = this._windowTracker.getSnapEntry(win);
-        if (!entry) return this.snapFocusedToPreset("quarters", 0);
+        const wa = this._zoneManager._getWorkarea(win.get_monitor());
+        if (!wa) return;
+        const slot = classifySlot(win.get_frame_rect(), wa);
+        const target = resolveMove(slot, direction);
+        if (!target) return;
 
-        if (entry.presetId === "halves" && entry.zoneIndex === 0) return this.snapFocusedToPreset("quarters", 0);
-        if (entry.presetId === "halves" && entry.zoneIndex === 1) return this.snapFocusedToPreset("quarters", 1);
-        if (entry.presetId === "quarters" && entry.zoneIndex === 2) return this.snapFocusedToPreset("quarters", 0);
-        if (entry.presetId === "quarters" && entry.zoneIndex === 3) return this.snapFocusedToPreset("quarters", 1);
-        return this.snapFocusedToPreset("quarters", 0);
+        const [presetId, zoneIndex] = target;
+        this.snapFocusedToPreset(presetId, zoneIndex);
     }
 
-    snapFocusedToLowerQuarter() {
-        if (!this._windowTracker) return;
-        const win = global.display.get_focus_window();
-        if (!win) return;
-
-        const entry = this._windowTracker.getSnapEntry(win);
-        if (!entry) return this.snapFocusedToPreset("quarters", 2);
-
-        if (entry.presetId === "halves" && entry.zoneIndex === 0) return this.snapFocusedToPreset("quarters", 2);
-        if (entry.presetId === "halves" && entry.zoneIndex === 1) return this.snapFocusedToPreset("quarters", 3);
-        if (entry.presetId === "quarters" && entry.zoneIndex === 0) return this.snapFocusedToPreset("quarters", 2);
-        if (entry.presetId === "quarters" && entry.zoneIndex === 1) return this.snapFocusedToPreset("quarters", 3);
-        return this.snapFocusedToPreset("quarters", 2);
-    }
-
-    moveSwapFocused(direction) {
-        const win = global.display.get_focus_window();
-        if (!win || !this._zoneManager) return;
-
-        const entry = this._windowTracker.getSnapEntry(win);
-        const monitorIndex = win.get_monitor();
-        let targetPreset, targetZone;
-
-        if (!entry) {
-            if (direction === "left") { targetPreset = "halves"; targetZone = 0; }
-            else if (direction === "right") { targetPreset = "halves"; targetZone = 1; }
-            else if (direction === "up") { targetPreset = "quarters"; targetZone = 0; }
-            else if (direction === "down") { targetPreset = "quarters"; targetZone = 2; }
-        } else if (entry.presetId === "halves") {
-            if (entry.zoneIndex === 0) {
-                if (direction === "right") { targetPreset = "halves"; targetZone = 1; }
-                else if (direction === "up") { targetPreset = "quarters"; targetZone = 0; }
-                else if (direction === "down") { targetPreset = "quarters"; targetZone = 2; }
-            } else {
-                if (direction === "left") { targetPreset = "halves"; targetZone = 0; }
-                else if (direction === "up") { targetPreset = "quarters"; targetZone = 1; }
-                else if (direction === "down") { targetPreset = "quarters"; targetZone = 3; }
-            }
-        } else if (entry.presetId === "quarters") {
-            const quarterMap = {
-                0: { left: null, right: 1, up: null, down: 2 },
-                1: { left: 0, right: null, up: null, down: 3 },
-                2: { left: null, right: 3, up: 0, down: null },
-                3: { left: 2, right: null, up: 1, down: null },
-            };
-            targetZone = quarterMap[entry.zoneIndex]?.[direction];
-            if (targetZone !== null && targetZone !== undefined)
-                targetPreset = "quarters";
-        }
-
-        if (targetPreset && targetZone !== undefined) {
-            const rects = this._zoneManager.getZoneRects(targetPreset, monitorIndex, this._settings.windowGapSize);
-            const rect = rects[targetZone];
-            if (rect)
-                this._windowTracker.snapWindow(win, targetPreset, targetZone, rect);
-        }
-    }
+    snapFocusedLeft()  { this._directionalMove("left"); }
+    snapFocusedRight() { this._directionalMove("right"); }
+    snapFocusedToUpperQuarter() { this._directionalMove("up"); }
+    snapFocusedToLowerQuarter() { this._directionalMove("down"); }
+    moveSwapFocused(direction) { this._directionalMove(direction); }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -235,203 +202,86 @@ describe("Controller snap dispatch", () => {
         });
     });
 
-    describe("snapFocusedToUpperQuarter (context-aware)", () => {
-        it("unsnapped → top-left quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl.snapFocusedToUpperQuarter();
-            assert.equal(ctrl._windowTracker._snapCalls[0].presetId, "quarters");
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 0);
-        });
+    // Focus a window classified into the given geometry slot.
+    function focusSlot(slot) {
+        const win = makeWindow();
+        win._setSlot(slot);
+        display._setFocusWindow(win);
+        return win;
+    }
+    const lastSnap = () => ctrl._windowTracker._snapCalls[0];
 
+    describe("directional move — Up (snapFocusedToUpperQuarter)", () => {
         it("left half → top-left quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "halves", zoneIndex: 0 });
-            ctrl.snapFocusedToUpperQuarter();
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 0);
+            focusSlot("L"); ctrl.snapFocusedToUpperQuarter();
+            assert.deepEqual([lastSnap().presetId, lastSnap().zoneIndex], ["quarters", 0]);
         });
-
         it("right half → top-right quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "halves", zoneIndex: 1 });
-            ctrl.snapFocusedToUpperQuarter();
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 1);
+            focusSlot("R"); ctrl.snapFocusedToUpperQuarter();
+            assert.deepEqual([lastSnap().presetId, lastSnap().zoneIndex], ["quarters", 1]);
         });
-
         it("bottom-left quarter → top-left quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "quarters", zoneIndex: 2 });
-            ctrl.snapFocusedToUpperQuarter();
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 0);
+            focusSlot("BL"); ctrl.snapFocusedToUpperQuarter();
+            assert.equal(lastSnap().zoneIndex, 0);
         });
-
         it("bottom-right quarter → top-right quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "quarters", zoneIndex: 3 });
-            ctrl.snapFocusedToUpperQuarter();
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 1);
+            focusSlot("BR"); ctrl.snapFocusedToUpperQuarter();
+            assert.equal(lastSnap().zoneIndex, 1);
+        });
+        it("top-left quarter → grows to left half (top edge)", () => {
+            focusSlot("TL"); ctrl.snapFocusedToUpperQuarter();
+            assert.deepEqual([lastSnap().presetId, lastSnap().zoneIndex], ["halves", 0]);
+        });
+        it("maximized → no-op", () => {
+            focusSlot("maxi"); ctrl.snapFocusedToUpperQuarter();
+            assert.equal(ctrl._windowTracker._snapCalls.length, 0);
         });
     });
 
-    describe("snapFocusedToLowerQuarter (context-aware)", () => {
-        it("unsnapped → bottom-left quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl.snapFocusedToLowerQuarter();
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 2);
+    describe("directional move — Down (snapFocusedToLowerQuarter)", () => {
+        it("top-right quarter → bottom-right quarter (user-reported case)", () => {
+            focusSlot("TR"); ctrl.snapFocusedToLowerQuarter();
+            assert.deepEqual([lastSnap().presetId, lastSnap().zoneIndex], ["quarters", 3]);
         });
-
-        it("left half → bottom-left quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "halves", zoneIndex: 0 });
-            ctrl.snapFocusedToLowerQuarter();
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 2);
-        });
-
-        it("right half → bottom-right quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "halves", zoneIndex: 1 });
-            ctrl.snapFocusedToLowerQuarter();
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 3);
-        });
-
         it("top-left quarter → bottom-left quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "quarters", zoneIndex: 0 });
-            ctrl.snapFocusedToLowerQuarter();
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 2);
+            focusSlot("TL"); ctrl.snapFocusedToLowerQuarter();
+            assert.equal(lastSnap().zoneIndex, 2);
         });
-
-        it("top-right quarter → bottom-right quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "quarters", zoneIndex: 1 });
-            ctrl.snapFocusedToLowerQuarter();
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 3);
+        it("left half → bottom-left quarter", () => {
+            focusSlot("L"); ctrl.snapFocusedToLowerQuarter();
+            assert.equal(lastSnap().zoneIndex, 2);
+        });
+        it("bottom-right quarter → grows to right half (bottom edge)", () => {
+            focusSlot("BR"); ctrl.snapFocusedToLowerQuarter();
+            assert.deepEqual([lastSnap().presetId, lastSnap().zoneIndex], ["halves", 1]);
         });
     });
 
-    describe("moveSwapFocused", () => {
-        it("unsnapped + left → left half", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl.moveSwapFocused("left");
-            assert.equal(ctrl._windowTracker._snapCalls[0].presetId, "halves");
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 0);
+    describe("directional move — Left/Right (snapFocusedLeft/Right, moveSwapFocused)", () => {
+        it("right half + Left → left half", () => {
+            focusSlot("R"); ctrl.snapFocusedLeft();
+            assert.deepEqual([lastSnap().presetId, lastSnap().zoneIndex], ["halves", 0]);
         });
-
-        it("unsnapped + right → right half", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl.moveSwapFocused("right");
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 1);
+        it("left half + Right → right half", () => {
+            focusSlot("L"); ctrl.snapFocusedRight();
+            assert.deepEqual([lastSnap().presetId, lastSnap().zoneIndex], ["halves", 1]);
         });
-
-        it("unsnapped + up → top-left quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl.moveSwapFocused("up");
-            assert.equal(ctrl._windowTracker._snapCalls[0].presetId, "quarters");
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 0);
+        it("top-left quarter + Right → top-right quarter", () => {
+            focusSlot("TL"); ctrl.snapFocusedRight();
+            assert.equal(lastSnap().zoneIndex, 1);
         });
-
-        it("unsnapped + down → bottom-left quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl.moveSwapFocused("down");
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 2);
+        it("top-right quarter + Left → top-left quarter", () => {
+            focusSlot("TR"); ctrl.snapFocusedLeft();
+            assert.equal(lastSnap().zoneIndex, 0);
         });
-
-        it("left half + right → right half", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "halves", zoneIndex: 0 });
-            ctrl.moveSwapFocused("right");
-            assert.equal(ctrl._windowTracker._snapCalls[0].presetId, "halves");
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 1);
-        });
-
-        it("right half + left → left half", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "halves", zoneIndex: 1 });
-            ctrl.moveSwapFocused("left");
-            assert.equal(ctrl._windowTracker._snapCalls[0].presetId, "halves");
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 0);
-        });
-
-        it("left half + up → top-left quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "halves", zoneIndex: 0 });
-            ctrl.moveSwapFocused("up");
-            assert.equal(ctrl._windowTracker._snapCalls[0].presetId, "quarters");
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 0);
-        });
-
-        it("right half + down → bottom-right quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "halves", zoneIndex: 1 });
-            ctrl.moveSwapFocused("down");
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 3);
-        });
-
-        it("top-left quarter + right → top-right quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "quarters", zoneIndex: 0 });
-            ctrl.moveSwapFocused("right");
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 1);
-        });
-
-        it("top-left quarter + down → bottom-left quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "quarters", zoneIndex: 0 });
-            ctrl.moveSwapFocused("down");
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 2);
-        });
-
-        it("bottom-right quarter + left → bottom-left quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "quarters", zoneIndex: 3 });
-            ctrl.moveSwapFocused("left");
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 2);
-        });
-
-        it("bottom-right quarter + up → top-right quarter", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "quarters", zoneIndex: 3 });
-            ctrl.moveSwapFocused("up");
-            assert.equal(ctrl._windowTracker._snapCalls[0].zoneIndex, 1);
-        });
-
-        it("top-right quarter + right → no-op (edge of screen)", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "quarters", zoneIndex: 1 });
-            ctrl.moveSwapFocused("right");
+        it("left half + Left → no-op (outer edge)", () => {
+            focusSlot("L"); ctrl.snapFocusedLeft();
             assert.equal(ctrl._windowTracker._snapCalls.length, 0);
         });
-
-        it("bottom-left quarter + left → no-op (edge of screen)", () => {
-            const win = makeWindow();
-            display._setFocusWindow(win);
-            ctrl._windowTracker._snapEntries.set(win.get_id(), { presetId: "quarters", zoneIndex: 2 });
-            ctrl.moveSwapFocused("left");
-            assert.equal(ctrl._windowTracker._snapCalls.length, 0);
+        it("moveSwapFocused delegates to the same model (TR + down → BR)", () => {
+            focusSlot("TR"); ctrl.moveSwapFocused("down");
+            assert.deepEqual([lastSnap().presetId, lastSnap().zoneIndex], ["quarters", 3]);
         });
-
         it("does nothing when no focused window", () => {
             display._setFocusWindow(null);
             ctrl.moveSwapFocused("left");
