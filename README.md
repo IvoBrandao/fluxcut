@@ -1,6 +1,6 @@
-# WindowTilingControl — Window Tiling Control for GNOME
+# Window Tiling Control for GNOME
 
-A GNOME Shell extension (45–49) that brings window snap zones to the Linux desktop.
+A GNOME Shell extension (45–50) that brings window snap zones to the Linux desktop.
 Drag windows to screen edges, use i3-inspired keyboard shortcuts, or draw your own custom zone layouts.
 
 ## Features
@@ -38,7 +38,7 @@ gnome-extensions enable window-tiling-control@gnome-tiling
 
 ### Dependencies
 
-- GNOME Shell 45, 46, 47, 48, or 49
+- GNOME Shell 45, 46, 47, 48, 49 or 50
 - `glib-compile-schemas` (part of `glib2` / `libglib2.0-dev`)
 - `gettext` (for translations, optional)
 
